@@ -1,0 +1,93 @@
+services:
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - microservices-network
+
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-network
+
+  users-api:
+    build: ./users-api
+    ports:
+      - "8083:8080"
+    environment:
+      - JWT_SECRET=PRFT
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=default
+      - ZIPKIN_URL=http://zipkin:9411
+    depends_on:
+      - redis
+    networks:
+      - microservices-network
+
+  auth-api:
+    build: ./auth-api
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=PRFT 
+      - USERS_API_ADDRESS=http://users-api:8080 
+      - AUTH_API_PORT=8000
+      - ZIPKIN_URL=http://zipkin:9411
+    depends_on:
+      - redis
+      - users-api
+    networks:
+      - microservices-network
+
+  todos-api:
+    build: ./todos-api
+    ports:
+      - "3000:3000"
+    environment:
+      - JWT_SECRET=PRFT
+      - TODO_API_PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=log_channel
+      - USERS_API_URL=http://users-api:8080
+      - ZIPKIN_URL=http://zipkin:9411
+    depends_on:
+      - redis
+      - users-api
+    networks:
+      - microservices-network
+
+  log-processor:
+    build: ./log-message-processor
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_CHANNEL=log_channel
+      - ZIPKIN_URL=http://zipkin:9411
+    depends_on:
+      - redis
+    networks:
+      - microservices-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8081:80"
+    environment:
+      - JWT_SECRET=PRFT
+      - AUTH_API_ADDRESS=http://auth-api:8000
+      - TODOS_API_ADDRESS=http://todos-api:3000
+      - ZIPKIN_URL=http://zipkin:9411
+    depends_on:
+      - auth-api
+      - todos-api
+      - users-api
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge

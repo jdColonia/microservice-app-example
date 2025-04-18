@@ -87,4 +87,4 @@ module "static_web_app" {
   sku                 = var.static_web_app_sku
 }
 
-data "azurerm_client_config" "current" {}
+data "azurerm_client_config" "current" { }

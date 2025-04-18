@@ -10,7 +10,7 @@ name: Terraform Pipeline
 on:
   push:
     branches:
-      - master
+      - '*'
     paths:
       - 'terraform/**'
 

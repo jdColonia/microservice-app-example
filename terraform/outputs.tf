@@ -17,3 +17,7 @@ output "key_vault_uri" {
 output "app_service_urls" {
   value = module.app_service.app_service_urls
 }
+
+output "function_app_url" {
+  value = module.function_app.function_app_url
+}

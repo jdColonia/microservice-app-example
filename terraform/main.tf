@@ -47,16 +47,44 @@ module "key_vault" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
 }
 
+module "service_plan" {
+  source              = "./modules/service_plan"
+  name                = "${local.resource_name_prefix}-asp"
+  location            = var.location
+  resource_group_name = module.resource_group.name
+}
+
 module "app_service" {
   source = "./modules/app_service"
 
-  resource_group_name  = module.resource_group.name
-  location             = var.location
-  app_service_plan_name = "${local.resource_name_prefix}-asp"
-  subnet_id            = module.networking.subnet_ids["application"]
-  acr_login_server     = module.container_registry.login_server
-  microservices        = var.microservices
-  key_vault_id         = module.key_vault.key_vault_id
+  resource_group_name = module.resource_group.name
+  location            = var.location
+  app_service_plan_id = module.service_plan.id
+  subnet_id           = module.networking.subnet_ids["application"]
+  acr_login_server    = module.container_registry.login_server
+  microservices       = var.microservices
+  key_vault_id        = module.key_vault.key_vault_id
+}
+
+
+module "function_app" {
+  source = "./modules/function_app"
+
+  name                = "${local.resource_name_prefix}-func"
+  resource_group_name = module.resource_group.name
+  location            = var.location
+  subnet_id           = module.networking.subnet_ids["application"]
+  app_service_plan_id = module.service_plan.id
+  acr_login_server    = module.container_registry.login_server
+}
+
+module "static_web_app" {
+  source = "./modules/static_web_app"
+
+  name                = "${local.resource_name_prefix}-swa"
+  resource_group_name = module.resource_group.name
+  location            = var.location
+  sku                 = var.static_web_app_sku
 }
 
 data "azurerm_client_config" "current" {}

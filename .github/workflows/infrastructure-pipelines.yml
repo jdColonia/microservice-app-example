@@ -5,12 +5,12 @@ name: Terraform Pipeline
 # =======================================================
 
 # Este pipeline se ejecutará automáticamente cuando:
-# - Se realicen cambios en la rama 'main'
+# - Se realicen cambios en la rama 'master'
 # - Y los cambios afecten archivos dentro del directorio 'terraform/'
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'terraform/**'
 

@@ -1,0 +1,49 @@
+name: Terraform Destroy
+
+# =======================================================
+# PIPELINE MANUAL PARA DESTRUIR INFRAESTRUCTURA EN AZURE
+# =======================================================
+
+# Este pipeline se ejecuta manualmente desde la pestaña 'Actions' en GitHub
+on:
+  workflow_dispatch: # Activación manual
+
+# Variables reutilizables a lo largo del workflow
+env:
+  TERRAFORM_DIR: 'terraform' # Carpeta donde están los archivos .tf
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }} # Credenciales de Azure configuradas en GitHub Secrets
+
+jobs:
+  # ==============================================
+  # ETAPA ÚNICA: DESTRUCCIÓN DE INFRAESTRUCTURA
+  # ==============================================
+  destroy:
+    name: 'Destruir Infraestructura'
+    runs-on: ubuntu-latest # Agente de ejecución (máquina virtual en la nube)
+
+    steps:
+      # Paso 1: Checkout del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Autenticación con Azure
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
+      # Paso 3: Instalación de Terraform
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 'latest'
+
+      # Paso 4: Inicializar el backend de Terraform
+      - name: Terraform Init
+        run: terraform init -reconfigure
+        working-directory: ${{ env.TERRAFORM_DIR }}
+
+      # Paso 5: Destruir la infraestructura
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+        working-directory: ${{ env.TERRAFORM_DIR }}

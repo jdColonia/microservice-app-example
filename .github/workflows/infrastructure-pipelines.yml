@@ -12,7 +12,7 @@ on:
     branches:
       - '*'
     paths:
-      - 'terraform/**'
+      - '../../terraform/**'
 
 # Variables reutilizables a lo largo del workflow
 env:

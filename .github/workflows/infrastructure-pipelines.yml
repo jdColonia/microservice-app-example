@@ -56,7 +56,7 @@ jobs:
       # - Muestra los cambios que se aplicarían sin ejecutarlos
       # - Guarda el plan como archivo binario `tfplan`
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=tfplan -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
         working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 7: Subir el archivo tfplan como artefacto

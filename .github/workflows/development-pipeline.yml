@@ -3,14 +3,19 @@ name: Development Pipeline
 # =======================================================
 # CONFIGURACIÓN BÁSICA DEL PIPELINE DE DESARROLLO
 # =======================================================
-
 # Este pipeline se ejecutará automáticamente cuando:
-# - Se realicen cambios en la rama 'master'
-# - O se haya ejecutado exitosamente el pipeline de infraestructura
+# - Se hagan cambios en la rama 'master' en directorios específicos (código de microservicios)
+# - O cuando se complete exitosamente el pipeline de infraestructura (primera vez)
 on:
   push:
     branches:
       - master
+    paths:
+      - 'auth-api/**'
+      - 'frontend/**'
+      - 'log-message-processor/**'
+      - 'todos-api/**'
+      - 'users-api/**'
 
   workflow_run:
     workflows: ['Infrastructure Pipeline']
@@ -33,32 +38,46 @@ jobs:
     runs-on: ubuntu-latest # Agente de ejecución (máquina virtual en la nube)
 
     steps:
-      # Paso 1: Checkout del código
+      # Paso 1: Clonar el repositorio en el runner
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Paso 2: Configurar Azure CLI
+      # Paso 2: Autenticarse en Azure con las credenciales del secreto
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ env.AZURE_CREDENTIALS }}
 
-      # Paso 3: Login en Azure Container Registry (ACR)
+      # Paso 3: Verificar que el grupo de recursos existe antes de continuar
+      - name: Verificar si el grupo de recursos existe
+        run: |
+          echo "Verificando existencia del grupo de recursos..."
+          if ! az group exists --name $RESOURCE_GROUP --subscription $AZURE_SUBSCRIPTION_ID | grep true; then
+            echo "❌ El grupo de recursos no existe. Abortando ejecución del pipeline."
+            exit 1
+          fi
+          echo "✅ El grupo de recursos existe."
+
+      # Paso 4: Login al Azure Container Registry
       - name: Login al Azure Container Registry (ACR)
         run: |
           az acr login --name ${ACR_NAME%%.*}
 
-      # Paso 4: Construcción y publicación de imágenes Docker en el ACR
-      - name: Construcción y publicación de imágenes en ACR
+      # ===================================================
+      # CASO 1: Push inicial después de infraestructura
+      # ===================================================
+      # Si el pipeline fue disparado por workflow_run, construir y desplegar todos los servicios
+      - name: Push inicial de todas las imágenes
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
         run: |
-          chmod +x ./push_images_to_acr.sh
-          ./push_images_to_acr.sh
-
-      # Paso 5: Actualización de las Azure Container Apps con las nuevas imágenes
-      - name: Despliegue en Azure Container Apps
-        run: |
+          timestamp=$(date +%Y%m%d%H%M%S)
           for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
-            echo "🔄 Actualizando $SERVICE..."
+            echo "🔧 Construyendo imagen para $SERVICE..."
+            docker build -t $ACR_NAME/$SERVICE:latest -t $ACR_NAME/$SERVICE:$timestamp ./$SERVICE
+            docker push $ACR_NAME/$SERVICE:latest
+            docker push $ACR_NAME/$SERVICE:$timestamp
+
+            echo "🚀 Desplegando $SERVICE en Azure..."
             az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
@@ -68,15 +87,46 @@ jobs:
             echo "-------------------------------------------"
           done
 
-      # Paso 6: Verificación del estado post-despliegue
-      - name: Verificación del estado post-despliegue
+      # ===================================================
+      # CASO 2: Push normal a master → detectar cambios
+      # ===================================================
+
+      # Paso 1: Detectar cuáles microservicios tuvieron cambios
+      - name: Detectar microservicios modificados
+        if: github.event_name == 'push'
+        id: detect
         run: |
+          echo "DETECTED_SERVICES=" >> $GITHUB_ENV
           for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
-            echo "Estado de $SERVICE:"
-            az containerapp show \
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep "^$SERVICE/"; then
+              echo "📦 Cambios detectados en: $SERVICE"
+              echo "DETECTED_SERVICES+=${SERVICE} " >> $GITHUB_ENV
+            fi
+          done
+
+      # Paso 2: Construir y subir solo las imágenes modificadas
+      - name: Construcción y publicación de imágenes modificadas
+        if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
+        run: |
+          timestamp=$(date +%Y%m%d%H%M%S)
+          for SERVICE in $DETECTED_SERVICES; do
+            echo "🔧 Construyendo imagen para $SERVICE..."
+            docker build -t $ACR_NAME/$SERVICE:latest -t $ACR_NAME/$SERVICE:$timestamp ./$SERVICE
+            docker push $ACR_NAME/$SERVICE:latest
+            docker push $ACR_NAME/$SERVICE:$timestamp
+          done
+
+      # Paso 3: Desplegar las imágenes modificadas en sus Container Apps
+      - name: Despliegue de microservicios modificados
+        if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
+        run: |
+          for SERVICE in $DETECTED_SERVICES; do
+            echo "🚀 Desplegando $SERVICE en Azure..."
+            az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
-              --query "{name:name, state:properties.latestRevisionFqdn, image:properties.template.containers[0].image}" \
+              --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
+            echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
           done

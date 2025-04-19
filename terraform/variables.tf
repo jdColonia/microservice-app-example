@@ -52,7 +52,7 @@ variable "subnet_cidr" {
 variable "acr_name" {
   description = "Name of the Azure Container Registry"
   type        = string
-  default     = "egzmicroserviceappacr"
+  default     = "gacomicroserviceappacr"
 }
 
 variable "acr_sku" {

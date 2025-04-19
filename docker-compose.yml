@@ -66,7 +66,7 @@ services:
     networks:
       - microservices-network
 
-  log-processor:
+  log-message-processor:
     build: ./log-message-processor
     environment:
       - PORT=8081
@@ -95,6 +95,36 @@ services:
       - auth-api
       - todos-api
       - users-api
+    networks:
+      - microservices-network
+
+  # Prometheus Service for monitoring
+  prometheus:
+    image: prom/prometheus
+    user: "65534"  # User ID for non-root user
+    volumes:
+      - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"  # Config file for Prometheus
+      - "./prometheus/data:/prometheus"  # Data directory for Prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - microservices-network
+    depends_on:
+      - frontend
+
+  # Grafana Service for visualization
+  grafana:
+    image: grafana/grafana
+    user: "472"  # User ID for non-root user
+    volumes:
+      - "./grafana/data:/var/lib/grafana"  # Data directory for Grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin  
+      - GF_SECURITY_ADMIN_PASSWORD=admin  
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
     networks:
       - microservices-network
 

@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "auth-api"
+    static_configs:
+      - targets: ["auth-api:8000"]
+
+  - job_name: "users-api"
+    metrics_path: /prometheus
+    static_configs:
+      - targets: ["users-api:8083"]
+
+  - job_name: "todos-api"
+    static_configs:
+      - targets: ["todos-api:8082"]
+
+  - job_name: "log-message-processor"
+    static_configs:
+      - targets: ["log-message-processor:8081"]

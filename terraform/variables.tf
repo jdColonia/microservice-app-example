@@ -1,112 +1,81 @@
+# Provider variables
 variable "subscription_id" {
-  description = "Subscripción de azure"
   type        = string
+  description = "The subscription ID to use for Azure resources."
 }
 
-variable "project_name" {
-  description = "Nombre del proyecto"
+variable "resource_group_name" {
+  description = "Name of the Azure resource group"
   type        = string
-  default     = "microservices-app"
+  default     = "microservice-app-rg"
 }
 
 variable "location" {
-  description = "Región de Azure donde se desplegará la infraestructura"
+  description = "Azure region where resources will be created"
   type        = string
-  default     = "West Europe"
+  default     = "eastus"
 }
 
-# Variables para redes
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default = {
+    Environment = "Development"
+    Project     = "Microservice App"
+  }
+}
+
+variable "vnet_name" {
+  description = "Name of the virtual network"
+  type        = string
+  default     = "microservice-vnet"
+}
+
 variable "address_space" {
-  description = "Espacio de direcciones para la VNet"
+  description = "Address space for the virtual network"
   type        = list(string)
   default     = ["10.0.0.0/16"]
 }
 
-variable "subnet_prefixes" {
-  description = "Prefijos de subredes"
-  type        = map(string)
-  default = {
-    frontend    = "10.0.1.0/24"
-    integration = "10.0.2.0/24"
-    application = "10.0.3.0/24"
-    data        = "10.0.4.0/24"
-    security    = "10.0.5.0/24"
-  }
+variable "subnet_name" {
+  description = "Name of the subnet for Container Apps"
+  type        = string
+  default     = "container-apps-subnet"
 }
 
-# Variables para Container Registry
+variable "subnet_cidr" {
+  description = "CIDR for the Container Apps subnet"
+  type        = string
+  default     = "10.0.0.0/23"
+}
+
+variable "acr_name" {
+  description = "Name of the Azure Container Registry"
+  type        = string
+  default     = "egzmicroserviceappacr"
+}
+
 variable "acr_sku" {
-  description = "SKU para Azure Container Registry"
+  description = "SKU for Azure Container Registry"
   type        = string
-  default     = "Standard"
+  default     = "Basic"
 }
 
-# Variables para microservicios
-variable "microservices" {
-  description = "Configuración de microservicios"
-  type = map(object({
-    image_name     = string
-    container_port = number
-    cpu            = string
-    memory         = string
-    env_vars       = map(string)
-  }))
-  default = {
-    "auth-api" = {
-      image_name     = "auth-api"
-      container_port = 8000
-      cpu            = "0.5"
-      memory         = "1Gi"
-      env_vars = {
-        JWT_SECRET        = "PRFT"
-        AUTH_API_PORT     = "8000"
-        USERS_API_ADDRESS = "http://users-api:8080"
-      }
-    },
-    "users-api" = {
-      image_name     = "users-api"
-      container_port = 8080
-      cpu            = "1.0"
-      memory         = "2Gi"
-      env_vars = {
-        JWT_SECRET             = "PRFT"
-        SERVER_PORT            = "8080"
-        SPRING_PROFILES_ACTIVE = "default"
-      }
-    },
-    "todos-api" = {
-      image_name     = "todos-api"
-      container_port = 3000
-      cpu            = "0.5"
-      memory         = "1Gi"
-      env_vars = {
-        JWT_SECRET    = "PRFT"
-        TODO_API_PORT = "3000"
-        REDIS_HOST    = "redis"
-        REDIS_PORT    = "6379"
-        REDIS_CHANNEL = "log_channel"
-        USERS_API_URL = "http://users-api:8080"
-      }
-    }
-  }
+variable "acr_admin_enabled" {
+  description = "Enable admin user for Azure Container Registry"
+  type        = bool
+  default     = true
 }
 
-# Variables para API Management
-variable "apim_sku" {
-  description = "SKU para API Management"
+variable "container_apps_environment_name" {
+  description = "Name of the Container Apps Environment"
   type        = string
-  default     = "Developer"
+  default     = "microservice-env"
 }
 
-variable "apim_capacity" {
-  description = "Capacidad para API Management"
-  type        = number
-  default     = 1
-}
-
-# Variables para Static Web App
-variable "static_web_app_sku" {
-  description = "SKU para Static Web App"
+variable "jwt_secret" {
+  description = "Secret key for JWT authentication"
   type        = string
-  default     = "Free"
+  sensitive   = true
+  default     = "PRFT" # For development only. Use a secure method in production.
 }

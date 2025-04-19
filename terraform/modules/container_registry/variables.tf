@@ -1,20 +1,32 @@
-variable "name" {
-  description = "Nombre del Container Registry"
+variable "acr_name" {
+  description = "Name of the Azure Container Registry"
   type        = string
 }
 
 variable "resource_group_name" {
-  description = "Nombre del grupo de recursos"
+  description = "Name of the resource group"
   type        = string
 }
 
 variable "location" {
-  description = "Ubicación del Container Registry"
+  description = "Azure region where the registry will be created"
   type        = string
 }
 
 variable "sku" {
-  description = "SKU del Container Registry"
+  description = "SKU for the Azure Container Registry"
   type        = string
-  default     = "Standard"
+  default     = "Basic"
+}
+
+variable "admin_enabled" {
+  description = "Enable admin user for Azure Container Registry"
+  type        = bool
+  default     = true
+}
+
+variable "tags" {
+  description = "Tags to apply to the registry"
+  type        = map(string)
+  default     = {}
 }

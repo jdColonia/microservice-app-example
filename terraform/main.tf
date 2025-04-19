@@ -1,90 +1,230 @@
+# Configure the Azure Provider
 provider "azurerm" {
-  features {
-    key_vault {
-      purge_soft_delete_on_destroy    = true
-      recover_soft_deleted_key_vaults = true
-    }
-  }
+  features {}
   subscription_id = var.subscription_id
 }
 
-locals {
-  resource_name_prefix = var.project_name
-}
-
+# Resource Group Module
 module "resource_group" {
-  source = "./modules/resource_group"
-
-  name     = "${local.resource_name_prefix}-rg"
+  source   = "./modules/resource_group"
+  name     = var.resource_group_name
   location = var.location
+  tags     = var.tags
 }
 
-module "networking" {
-  source = "./modules/networking"
-
-  resource_group_name = module.resource_group.name
-  location            = var.location
-  vnet_name           = "${local.resource_name_prefix}-vnet"
-  address_space       = var.address_space
-  subnet_prefixes     = var.subnet_prefixes
-}
-
+# Container Registry Module
 module "container_registry" {
-  source = "./modules/container_registry"
-
-  name                = "${replace(local.resource_name_prefix, "-", "")}acr"
+  source              = "./modules/container_registry"
   resource_group_name = module.resource_group.name
-  location            = var.location
+  location            = module.resource_group.location
+  acr_name            = var.acr_name
   sku                 = var.acr_sku
+  admin_enabled       = var.acr_admin_enabled
+  tags                = var.tags
+  depends_on          = [module.resource_group]
 }
 
-module "key_vault" {
-  source = "./modules/key_vault"
-
-  name                = "${replace(local.resource_name_prefix, "-", "")}kv"
+# Container Apps Environment Module
+module "container_apps_environment" {
+  source              = "./modules/container_apps_environment"
   resource_group_name = module.resource_group.name
-  location            = var.location
-  tenant_id           = data.azurerm_client_config.current.tenant_id
+  location            = module.resource_group.location
+  name                = var.container_apps_environment_name
+  # subnet_id           = module.network.subnet_id
+  tags       = var.tags
+  depends_on = [module.resource_group]
 }
 
-module "service_plan" {
-  source              = "./modules/service_plan"
-  name                = "${local.resource_name_prefix}-asp"
-  location            = var.location
-  resource_group_name = module.resource_group.name
+# Container Apps Modules
+module "zipkin" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "zipkin"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "openzipkin/zipkin:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = true
+  ingress_target_port        = 9411
+  environment_variables      = {}
+  secrets                    = {}
+  tags                       = var.tags
+  depends_on                 = [module.container_apps_environment]
 }
 
-module "app_service" {
-  source = "./modules/app_service"
-
-  resource_group_name = module.resource_group.name
-  location            = var.location
-  app_service_plan_id = module.service_plan.id
-  subnet_id           = module.networking.subnet_ids["application"]
-  acr_login_server    = module.container_registry.login_server
-  microservices       = var.microservices
-  key_vault_id        = module.key_vault.key_vault_id
+module "redis" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "redis"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "redis:7.0-alpine"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 6379
+  environment_variables      = {}
+  secrets                    = {}
+  tags                       = var.tags
+  depends_on                 = [module.container_apps_environment]
 }
 
+module "users_api" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "users-api"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "${module.container_registry.login_server}/users-api:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 8083
+  environment_variables = {
+    "JWT_SECRET"             = "secretref:jwt-secret"
+    "SERVER_PORT"            = "8083"
+    "SPRING_PROFILES_ACTIVE" = "default"
+    "ZIPKIN_URL"             = "http://zipkin/api/v2/spans"
+  }
 
-module "function_app" {
-  source = "./modules/function_app"
-
-  name                = "${local.resource_name_prefix}-func"
-  resource_group_name = module.resource_group.name
-  location            = var.location
-  subnet_id           = module.networking.subnet_ids["application"]
-  app_service_plan_id = module.service_plan.id
-  acr_login_server    = module.container_registry.login_server
+  secrets = {
+    "jwt-secret" = var.jwt_secret
+  }
+  tags       = var.tags
+  depends_on = [module.container_apps_environment, module.redis, module.zipkin]
 }
 
-module "static_web_app" {
-  source = "./modules/static_web_app"
-
-  name                = "${local.resource_name_prefix}-swa"
-  resource_group_name = module.resource_group.name
-  location            = var.location
-  sku                 = var.static_web_app_sku
+module "auth_api" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "auth-api"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "${module.container_registry.login_server}/auth-api:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 8000
+  environment_variables = {
+    "JWT_SECRET"        = "secretref:jwt-secret"
+    "AUTH_API_PORT"     = "8000"
+    "USERS_API_ADDRESS" = "http://users-api"
+    "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
+  }
+  secrets = {
+    "jwt-secret" = var.jwt_secret
+  }
+  tags       = var.tags
+  depends_on = [module.container_apps_environment, module.users_api]
 }
 
-data "azurerm_client_config" "current" { }
+module "todos_api" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "todos-api"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "${module.container_registry.login_server}/todos-api:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 8082
+  environment_variables = {
+    "TODO_API_PORT" = "8082"
+    "REDIS_HOST"    = "redis"
+    "REDIS_PORT"    = "6379"
+    "REDIS_CHANNEL" = "log_channel"
+    "USERS_API_URL" = "http://users-api"
+    "ZIPKIN_URL"    = "http://zipkin/api/v2/spans"
+    "JWT_SECRET"    = "secretref:jwt-secret"
+  }
+  secrets = {
+    "jwt-secret" = var.jwt_secret
+  }
+  tags       = var.tags
+  depends_on = [module.container_apps_environment, module.redis, module.users_api]
+}
+
+module "log_processor" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "log-message-processor"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "${module.container_registry.login_server}/log-message-processor:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 8081
+  environment_variables = {
+    "PORT"          = "8081"
+    "REDIS_HOST"    = "redis"
+    "REDIS_PORT"    = "6379"
+    "REDIS_CHANNEL" = "log_channel"
+    "ZIPKIN_URL"    = "http://zipkin/api/v2/spans"
+  }
+  secrets    = {}
+  tags       = var.tags
+  depends_on = [module.container_apps_environment, module.redis]
+}
+
+module "frontend" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "frontend"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "${module.container_registry.login_server}/frontend:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.5
+  memory                     = "1Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = true
+  ingress_target_port        = 8080
+  environment_variables = {
+    "PORT"              = "8080"
+    "AUTH_API_ADDRESS"  = "http://auth-api"
+    "TODOS_API_ADDRESS" = "http://todos-api"
+    "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
+    "JWT_SECRET"        = "secretref:jwt-secret"
+  }
+  secrets = {
+    "jwt-secret" = var.jwt_secret
+  }
+  tags       = var.tags
+  depends_on = [module.container_apps_environment, module.auth_api, module.todos_api]
+}

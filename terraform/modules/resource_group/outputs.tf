@@ -1,9 +1,14 @@
-output "id" {
-  description = "ID del grupo de recursos"
-  value       = azurerm_resource_group.this.id
+output "name" {
+  description = "The name of the resource group"
+  value       = azurerm_resource_group.rg.name
 }
 
-output "name" {
-  description = "Nombre del grupo de recursos"
-  value       = azurerm_resource_group.this.name
+output "location" {
+  description = "The location of the resource group"
+  value       = azurerm_resource_group.rg.location
+}
+
+output "id" {
+  description = "The ID of the resource group"
+  value       = azurerm_resource_group.rg.id
 }

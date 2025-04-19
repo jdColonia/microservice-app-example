@@ -51,8 +51,8 @@ jobs:
       # Paso 4: Construcción y publicación de imágenes Docker en el ACR
       - name: Construcción y publicación de imágenes en ACR
         run: |
-          chmod +x ./../../push_images_to_acr.sh
-          ./../../push_images_to_acr.sh
+          chmod +x ./build-and-push.sh
+          ./build-and-push.sh
 
       # Paso 5: Actualización de las Azure Container Apps con las nuevas imágenes
       - name: Despliegue en Azure Container Apps

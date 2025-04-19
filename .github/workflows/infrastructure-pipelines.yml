@@ -10,12 +10,16 @@ name: Terraform Pipeline
 on:
   push:
     branches:
-      - '*'
+      - master
+  pull_request:
+    branches:
+      - master
 
 # Variables reutilizables a lo largo del workflow
 env:
   TERRAFORM_DIR: 'terraform' # Carpeta donde están los archivos .tf
-  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }} # Credenciales de Azure configuradas en GitHub Secrets
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COLONIA }} # Credenciales de Azure configuradas en GitHub Secrets
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_COLONIA }} # Subscription ID de Azure configuradas en GitHub Secrets
 
 jobs:
   # ==============================================
@@ -56,7 +60,7 @@ jobs:
       # - Muestra los cambios que se aplicarían sin ejecutarlos
       # - Guarda el plan como archivo binario `tfplan`
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+        run: terraform plan -out=tfplan -var="subscription_id=${{ env.AZURE_SUBSCRIPTION_ID }}"
         working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 7: Subir el archivo tfplan como artefacto

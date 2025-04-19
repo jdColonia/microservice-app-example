@@ -6,15 +6,20 @@ name: Development Pipeline
 
 # Este pipeline se ejecutará automáticamente cuando:
 # - Se realicen cambios en la rama 'master'
+# - O se haya ejecutado exitosamente el pipeline de infraestructura
 on:
+  push:
+    branches:
+      - master
+
   workflow_run:
     workflows: ['Infrastructure Pipeline']
     types:
-      - completed
+      - completed # Solo cuando se completa el pipeline de infraestructura
 
 # Variables reutilizables a lo largo del workflow
 env:
-  ACR_NAME: 'microserviceappacr.azurecr.io' # Nombre completo del Azure Container Registry (ACR)
+  ACR_NAME: 'egzmicroserviceappacr.azurecr.io' # Nombre completo del Azure Container Registry (ACR)
   RESOURCE_GROUP: 'microservice-app-rg' # Grupo de recursos de Azure donde están desplegadas las Container Apps
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COLONIA }} # Credenciales de Azure configuradas en GitHub Secrets
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_COLONIA }} # ID de la suscripción de Azure configuradas en GitHub Secrets
@@ -38,18 +43,18 @@ jobs:
         with:
           creds: ${{ env.AZURE_CREDENTIALS }}
 
-      # Paso 3: Ingresar en el Azure Container Registry (ACR)
+      # Paso 3: Login en Azure Container Registry (ACR)
       - name: Login al Azure Container Registry (ACR)
         run: |
           az acr login --name ${ACR_NAME%%.*}
 
-      # Paso 4: Construir y publicar las imágenes de docker en el ACR
+      # Paso 4: Construcción y publicación de imágenes Docker en el ACR
       - name: Construcción y publicación de imágenes en ACR
         run: |
           chmod +x ./push_images_to_acr.sh
           ./push_images_to_acr.sh
 
-      # Paso 4: Actualizar los contenedores en Azure con las nuevas imágenes
+      # Paso 5: Actualización de las Azure Container Apps con las nuevas imágenes
       - name: Despliegue en Azure Container Apps
         run: |
           for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
@@ -63,7 +68,7 @@ jobs:
             echo "-------------------------------------------"
           done
 
-      # Paso 5: Verificar el estado de las Container Apps después del deploy
+      # Paso 6: Verificación del estado post-despliegue
       - name: Verificación del estado post-despliegue
         run: |
           for SERVICE in auth-api frontend log-message-processor todos-api users-api; do

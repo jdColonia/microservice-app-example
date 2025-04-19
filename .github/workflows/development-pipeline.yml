@@ -24,7 +24,7 @@ on:
 
 # Variables reutilizables a lo largo del workflow
 env:
-  ACR_NAME: 'egzmicroserviceappacr.azurecr.io' # Nombre completo del Azure Container Registry (ACR)
+  ACR_NAME: 'gacomicroserviceappacr.azurecr.io' # Nombre completo del Azure Container Registry (ACR)
   RESOURCE_GROUP: 'microservice-app-rg' # Grupo de recursos de Azure donde están desplegadas las Container Apps
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COLONIA }} # Credenciales de Azure configuradas en GitHub Secrets
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_COLONIA }} # ID de la suscripción de Azure configuradas en GitHub Secrets

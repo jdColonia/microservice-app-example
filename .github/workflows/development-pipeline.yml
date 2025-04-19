@@ -1,0 +1,76 @@
+name: Development Pipeline
+
+# =======================================================
+# CONFIGURACIÓN BÁSICA DEL PIPELINE DE DESARROLLO
+# =======================================================
+
+# Este pipeline se ejecutará automáticamente cuando:
+# - Se realicen cambios en la rama 'master'
+on:
+  push:
+    branches:
+      - master
+
+# Variables reutilizables a lo largo del workflow
+env:
+  ACR_NAME: 'microserviceappacr.azurecr.io' # Nombre completo del Azure Container Registry (ACR)
+  RESOURCE_GROUP: 'microservice-app-rg' # Grupo de recursos de Azure donde están desplegadas las Container Apps
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COLONIA }} # Credenciales de Azure configuradas en GitHub Secrets
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_COLONIA }} # ID de la suscripción de Azure configuradas en GitHub Secrets
+
+jobs:
+  # ==============================================
+  # ETAPA 1: BUILD Y DEPLOY DE MICROSERVICIOS
+  # ==============================================
+  build_and_deploy:
+    name: '1. Build y Deploy de Microservicios'
+    runs-on: ubuntu-latest # Agente de ejecución (máquina virtual en la nube)
+
+    steps:
+      # Paso 1: Checkout del código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Azure CLI
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
+      # Paso 3: Ingresar en el Azure Container Registry (ACR)
+      - name: Login al Azure Container Registry (ACR)
+        run: |
+          az acr login --name ${ACR_NAME%%.*}
+
+      # Paso 4: Construir y publicar las imágenes de docker en el ACR
+      - name: Construcción y publicación de imágenes en ACR
+        run: |
+          chmod +x ./push_images_to_acr.sh
+          ./push_images_to_acr.sh
+
+      # Paso 4: Actualizar los contenedores en Azure con las nuevas imágenes
+      - name: Despliegue en Azure Container Apps
+        run: |
+          for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
+            echo "🔄 Actualizando $SERVICE..."
+            az containerapp update \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --image $ACR_NAME/$SERVICE:latest \
+              --subscription $AZURE_SUBSCRIPTION_ID
+            echo "✅ $SERVICE actualizado"
+            echo "-------------------------------------------"
+          done
+
+      # Paso 5: Verificar el estado de las Container Apps después del deploy
+      - name: Verificación del estado post-despliegue
+        run: |
+          for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
+            echo "Estado de $SERVICE:"
+            az containerapp show \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --query "{name:name, state:properties.latestRevisionFqdn, image:properties.template.containers[0].image}" \
+              --subscription $AZURE_SUBSCRIPTION_ID
+            echo "-------------------------------------------"
+          done

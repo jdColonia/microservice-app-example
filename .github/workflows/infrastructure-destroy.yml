@@ -1,4 +1,4 @@
-name: Terraform Destroy
+name: Infrastructure Destroy
 
 # =======================================================
 # PIPELINE MANUAL PARA DESTRUIR INFRAESTRUCTURA EN AZURE

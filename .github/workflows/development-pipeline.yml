@@ -7,9 +7,10 @@ name: Development Pipeline
 # Este pipeline se ejecutará automáticamente cuando:
 # - Se realicen cambios en la rama 'master'
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ['Infrastructure Pipeline']
+    types:
+      - completed
 
 # Variables reutilizables a lo largo del workflow
 env:

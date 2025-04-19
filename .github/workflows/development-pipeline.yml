@@ -66,7 +66,7 @@ jobs:
       # ===================================================
       # CASO 1: Push inicial después de infraestructura
       # ===================================================
-      # Si el pipeline fue disparado por workflow_run, construir y desplegar todos los servicios
+      # Paso 5: Si el pipeline fue disparado por workflow_run, construir y desplegar todos los servicios
       - name: Push inicial de todas las imágenes
         if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
         run: |
@@ -91,7 +91,7 @@ jobs:
       # CASO 2: Push normal a master → detectar cambios
       # ===================================================
 
-      # Paso 1: Detectar cuáles microservicios tuvieron cambios
+      # Paso 5: Detectar cuáles microservicios tuvieron cambios
       - name: Detectar microservicios modificados
         if: github.event_name == 'push'
         id: detect
@@ -104,7 +104,7 @@ jobs:
             fi
           done
 
-      # Paso 2: Construir y subir solo las imágenes modificadas
+      # Paso 6: Construir y subir solo las imágenes modificadas
       - name: Construcción y publicación de imágenes modificadas
         if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
         run: |
@@ -116,7 +116,7 @@ jobs:
             docker push $ACR_NAME/$SERVICE:$timestamp
           done
 
-      # Paso 3: Desplegar las imágenes modificadas en sus Container Apps
+      # Paso 7: Desplegar las imágenes modificadas en sus Container Apps
       - name: Despliegue de microservicios modificados
         if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
         run: |

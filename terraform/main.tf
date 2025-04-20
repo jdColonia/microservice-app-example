@@ -72,7 +72,7 @@ module "redis" {
   memory                     = "1Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = false
+  ingress_external           = true
   ingress_target_port        = 6379
   environment_variables      = {}
   secrets                    = {}
@@ -94,7 +94,7 @@ module "users_api" {
   memory                     = "1Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = false
+  ingress_external           = true
   ingress_target_port        = 8083
   environment_variables = {
     "JWT_SECRET"             = "secretref:jwt-secret"
@@ -124,7 +124,7 @@ module "auth_api" {
   memory                     = "1Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = false
+  ingress_external           = true
   ingress_target_port        = 8000
   environment_variables = {
     "JWT_SECRET"        = "secretref:jwt-secret"
@@ -153,7 +153,7 @@ module "todos_api" {
   memory                     = "1Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = false
+  ingress_external           = true
   ingress_target_port        = 8082
   environment_variables = {
     "TODO_API_PORT" = "8082"
@@ -185,7 +185,7 @@ module "log_processor" {
   memory                     = "1Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = false
+  ingress_external           = true
   ingress_target_port        = 8081
   environment_variables = {
     "PORT"          = "8081"
@@ -246,11 +246,11 @@ module "prometheus" {
   ingress_external           = true
   ingress_target_port        = 9090
   environment_variables = {
-    "AUTH_API_TARGET"          = "auth-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8000"
-    "USERS_API_TARGET"         = "users-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8083"
-    "TODOS_API_TARGET"         = "todos-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8082"
-    "LOG_PROCESSOR_TARGET"     = "log-message-processor.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8081"
-    "FRONTEND_EXPORTER_TARGET" = "frontend.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:9113"
+    "AUTH_API_TARGET"          = "auth-api.${module.container_apps_env.properties.defaultDomain}"
+    "USERS_API_TARGET"         = "users-api.${module.container_apps_env.properties.defaultDomain}"
+    "TODOS_API_TARGET"         = "todos-api.${module.container_apps_env.properties.defaultDomain}"
+    "LOG_PROCESSOR_TARGET"     = "log-message-processor.${module.container_apps_env.properties.defaultDomain}"
+    "FRONTEND_EXPORTER_TARGET" = "frontend.${module.container_apps_env.properties.defaultDomain}"
   }
   depends_on = [module.container_apps_environment, module.auth_api, module.users_api, module.todos_api, module.log_processor, module.frontend]
   tags       = var.tags
@@ -282,7 +282,7 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    url: http://prometheus.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:9090
+    url: http://prometheus.${module.container_apps_env.properties.defaultDomain}:9090
     access: proxy
 EOF
     )

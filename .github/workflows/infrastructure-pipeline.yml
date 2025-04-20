@@ -11,6 +11,8 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'terraform/**'
 
 # Variables reutilizables a lo largo del workflow
 env:

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,27 +12,47 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	gommonlog "github.com/labstack/gommon/log"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	// ErrHttpGenericMessage that is returned in general case, details should be logged in such case
+	// Prometheus counter for tracking the number of requests handled by the Auth API
+	requestCount = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "auth_api_requests_total",
+			Help: "Total number of requests handled by the Auth API",
+		},
+		[]string{"method", "status"},
+	)
+)
+
+var (
+	// ErrHttpGenericMessage is returned for generic errors, details should be logged
 	ErrHttpGenericMessage = echo.NewHTTPError(http.StatusInternalServerError, "something went wrong, please try again later")
 
 	// ErrWrongCredentials indicates that login attempt failed because of incorrect login or password
 	ErrWrongCredentials = echo.NewHTTPError(http.StatusUnauthorized, "username or password is invalid")
 
+	// Default JWT secret key
 	jwtSecret = "myfancysecret"
 )
 
 func main() {
+	// Register Prometheus metrics
+	prometheus.MustRegister(requestCount)
+
+	// Retrieve configuration from environment variables
 	hostport := ":" + os.Getenv("AUTH_API_PORT")
 	userAPIAddress := os.Getenv("USERS_API_ADDRESS")
 
+	// Override default JWT secret if specified in environment variables
 	envJwtSecret := os.Getenv("JWT_SECRET")
 	if len(envJwtSecret) != 0 {
 		jwtSecret = envJwtSecret
 	}
 
+	// Initialize UserService with allowed user hashes
 	userService := UserService{
 		Client:         http.DefaultClient,
 		UserAPIAddress: userAPIAddress,
@@ -42,7 +63,31 @@ func main() {
 		},
 	}
 
+	// Create a new Echo instance
 	e := echo.New()
+
+	// Middleware to count requests
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			method := c.Request().Method
+			status := http.StatusOK
+			defer func() {
+				requestCount.WithLabelValues(method, fmt.Sprintf("%d", status)).Inc()
+			}()
+			err := next(c)
+			if err != nil {
+				if httpError, ok := err.(*echo.HTTPError); ok {
+					status = httpError.Code
+				}
+			}
+			return err
+		}
+	})
+
+	// Route for Prometheus metrics
+	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+
+	// Set log level
 	e.Logger.SetLevel(gommonlog.INFO)
 
 	if zipkinURL := os.Getenv("ZIPKIN_URL"); len(zipkinURL) != 0 {

@@ -228,3 +228,65 @@ module "frontend" {
   tags       = var.tags
   depends_on = [module.container_apps_environment, module.auth_api, module.todos_api]
 }
+
+module "prometheus" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "prometheus"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 1.0
+  memory                     = "2Gi"
+  min_replicas               = 1
+  max_replicas               = 1
+  ingress_external           = true
+  ingress_target_port        = 9090
+  environment_variables = {
+    "AUTH_API_TARGET"          = "auth-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8000"
+    "USERS_API_TARGET"         = "users-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8083"
+    "TODOS_API_TARGET"         = "todos-api.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8082"
+    "LOG_PROCESSOR_TARGET"     = "log-message-processor.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:8081"
+    "FRONTEND_EXPORTER_TARGET" = "frontend.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:9113"
+  }
+  depends_on = [module.container_apps_environment, module.auth_api, module.users_api, module.todos_api, module.log_processor, module.frontend]
+  tags       = var.tags
+}
+
+module "grafana" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "grafana"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "grafana/grafana:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 0.75
+  memory                     = "1.5Gi"
+  min_replicas               = 1
+  max_replicas               = 1
+  ingress_external           = true
+  ingress_target_port        = 3000
+  environment_variables = {
+    "GF_SECURITY_ADMIN_PASSWORD" = "12345",
+    "GF_PATHS_PROVISIONING"      = "/etc/grafana/provisioning"
+  }
+  secrets = {
+    "grafana-ds" = base64encode(<<EOF
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus.internal.${module.container_apps_environment.name}.${module.resource_group.location}.azurecontainerapps.io:9090
+    access: proxy
+EOF
+    )
+  }
+  depends_on = [module.container_apps_environment, module.prometheus]
+  tags       = var.tags
+}

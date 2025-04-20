@@ -3,6 +3,8 @@ package com.elgris.usersapi.api;
 import com.elgris.usersapi.models.User;
 import com.elgris.usersapi.repository.UserRepository;
 import io.jsonwebtoken.Claims;
+import io.prometheus.client.spring.web.PrometheusTimeMethod;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,7 @@ public class UsersController {
 
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
+    @PrometheusTimeMethod(name = "getUser_list_duration_seconds", help = "Time taken to get all users")
     public List<User> getUsers() {
         List<User> response = new LinkedList<>();
         userRepository.findAll().forEach(response::add);
@@ -28,6 +31,7 @@ public class UsersController {
     }
 
     @RequestMapping(value = "/{username}",  method = RequestMethod.GET)
+    @PrometheusTimeMethod(name = "getUser_duration_seconds", help = "Time taken to get a user")
     public User getUser(HttpServletRequest request, @PathVariable("username") String username) {
 
         Object requestAttribute = request.getAttribute("claims");

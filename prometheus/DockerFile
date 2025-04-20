@@ -1,0 +1,10 @@
+FROM prom/prometheus:latest
+
+# Copiar la plantilla de configuración
+COPY prometheus-template.yml /etc/prometheus/
+
+# Script de entrada que procesará la plantilla
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -71,7 +71,7 @@ jobs:
         if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
         run: |
           timestamp=$(date +%Y%m%d%H%M%S)
-          for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
+          for SERVICE in auth-api frontend log-message-processor todos-api users-api prometheus; do
             echo "🔧 Construyendo imagen para $SERVICE..."
             docker build -t $ACR_NAME/$SERVICE:latest -t $ACR_NAME/$SERVICE:$timestamp ./$SERVICE
             docker push $ACR_NAME/$SERVICE:latest

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Nombre del ACR (sin https://)
-ACR_NAME="egzmicroserviceappacr.azurecr.io"
+ACR_NAME="gacomicroserviceappacr.azurecr.io"
 
 # Lista de microservicios
 SERVICES=("auth-api" "frontend" "log-message-processor" "todos-api" "users-api")

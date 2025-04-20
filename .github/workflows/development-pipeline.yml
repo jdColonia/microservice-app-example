@@ -41,6 +41,8 @@ jobs:
       # Paso 1: Clonar el repositorio en el runner
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Clona todo el historial
 
       # Paso 2: Autenticarse en Azure con las credenciales del secreto
       - name: Azure Login

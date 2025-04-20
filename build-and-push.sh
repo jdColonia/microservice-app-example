@@ -4,7 +4,7 @@
 ACR_NAME="gacomicroserviceappacr.azurecr.io"
 
 # Lista de microservicios
-SERVICES=("auth-api" "frontend" "log-message-processor" "todos-api" "users-api")
+SERVICES=("auth-api" "frontend" "log-message-processor" "todos-api" "users-api" "prometheus")
 
 echo "Iniciando login en el ACR..."
 az acr login --name ${ACR_NAME%%.*} || { echo "Fallo el login en el ACR"; exit 1; }

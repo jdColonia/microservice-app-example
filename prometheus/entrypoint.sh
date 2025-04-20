@@ -1,7 +1,8 @@
 #!/bin/sh
+set -e # Exit on any error
 
-# Procesar la plantilla con las variables de entorno
-envsubst < /etc/prometheus/prometheus.template.yml > /etc/prometheus/prometheus.yml
+# Generate config from template with env vars
+envsubst < /etc/prometheus/prometheus.template.yml > /tmp/prometheus.yml
 
-# Ejecutar Prometheus
-exec /bin/prometheus "$@"
+# Start Prometheus with generated config
+exec prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.path=/prometheus

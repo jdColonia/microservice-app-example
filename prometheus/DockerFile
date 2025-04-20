@@ -1,10 +1,20 @@
-FROM prom/prometheus:latest
+# Use Alpine Linux 3.18 as the base image
+FROM alpine:3.18
 
-# Copiar la plantilla de configuración
-COPY prometheus-template.yml /etc/prometheus/
+# Install Prometheus, gettext (for envsubst), and bash with no cache
+RUN apk add --no-cache prometheus gettext bash
 
-# Script de entrada que procesará la plantilla
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Create necessary directories for config and data storage
+RUN mkdir -p /etc/prometheus /prometheus
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Copy the Prometheus template configuration file
+COPY prometheus.template.yml /etc/prometheus/prometheus.template.yml
+
+# Copy the entrypoint script
+COPY entrypoint.sh /etc/prometheus/entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /etc/prometheus/entrypoint.sh
+
+# Set the entrypoint to run our custom script
+ENTRYPOINT ["/etc/prometheus/entrypoint.sh"]

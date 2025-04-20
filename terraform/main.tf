@@ -246,11 +246,11 @@ module "prometheus" {
   ingress_external           = true
   ingress_target_port        = 9090
   environment_variables = {
-    "AUTH_API_TARGET"          = "auth-api.${module.container_apps_env.properties.defaultDomain}"
-    "USERS_API_TARGET"         = "users-api.${module.container_apps_env.properties.defaultDomain}"
-    "TODOS_API_TARGET"         = "todos-api.${module.container_apps_env.properties.defaultDomain}"
-    "LOG_PROCESSOR_TARGET"     = "log-message-processor.${module.container_apps_env.properties.defaultDomain}"
-    "FRONTEND_EXPORTER_TARGET" = "frontend.${module.container_apps_env.properties.defaultDomain}"
+    "AUTH_API_TARGET"          = "auth-api.${module.container_apps_environment.default_domain}"
+    "USERS_API_TARGET"         = "users-api.${module.container_apps_environment.default_domain}"
+    "TODOS_API_TARGET"         = "todos-api.${module.container_apps_environment.default_domain}"
+    "LOG_PROCESSOR_TARGET"     = "log-message-processor.${module.container_apps_environment.default_domain}"
+    "FRONTEND_EXPORTER_TARGET" = "frontend.${module.container_apps_environment.default_domain}"
   }
   depends_on = [module.container_apps_environment, module.auth_api, module.users_api, module.todos_api, module.log_processor, module.frontend]
   tags       = var.tags
@@ -282,7 +282,7 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    url: http://prometheus.${module.container_apps_env.properties.defaultDomain}
+    url: http://prometheus.${module.container_apps_environment.default_domain}
     access: proxy
 EOF
     )

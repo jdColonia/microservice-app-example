@@ -282,7 +282,7 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    url: http://prometheus.${module.container_apps_env.properties.defaultDomain}:9090
+    url: http://prometheus.${module.container_apps_env.properties.defaultDomain}
     access: proxy
 EOF
     )

@@ -98,20 +98,21 @@ jobs:
         if: github.event_name == 'push'
         id: detect
         run: |
-          echo "DETECTED_SERVICES=" >> $GITHUB_ENV
+          DETECTED=""
           for SERVICE in auth-api frontend log-message-processor todos-api users-api; do
             if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep "^$SERVICE/"; then
               echo "📦 Cambios detectados en: $SERVICE"
-              echo "DETECTED_SERVICES+=${SERVICE} " >> $GITHUB_ENV
+              DETECTED="$DETECTED $SERVICE"
             fi
           done
+          echo "detected_services=${DETECTED}" >> $GITHUB_OUTPUT
 
       # Paso 6: Construir y subir solo las imágenes modificadas
       - name: Construcción y publicación de imágenes modificadas
-        if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
+        if: github.event_name == 'push' && steps.detect.outputs.detected_services != ''
         run: |
           timestamp=$(date +%Y%m%d%H%M%S)
-          for SERVICE in $DETECTED_SERVICES; do
+          for SERVICE in ${{ steps.detect.outputs.detected_services }}; do
             echo "🔧 Construyendo imagen para $SERVICE..."
             docker build -t $ACR_NAME/$SERVICE:latest -t $ACR_NAME/$SERVICE:$timestamp ./$SERVICE
             docker push $ACR_NAME/$SERVICE:latest
@@ -120,9 +121,9 @@ jobs:
 
       # Paso 7: Desplegar las imágenes modificadas en sus Container Apps
       - name: Despliegue de microservicios modificados
-        if: github.event_name == 'push' && env.DETECTED_SERVICES != ''
+        if: github.event_name == 'push' && steps.detect.outputs.detected_services != ''
         run: |
-          for SERVICE in $DETECTED_SERVICES; do
+          for SERVICE in ${{ steps.detect.outputs.detected_services }}; do
             echo "🚀 Desplegando $SERVICE en Azure..."
             az containerapp update \
               --name $SERVICE \

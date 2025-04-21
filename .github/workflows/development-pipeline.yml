@@ -85,6 +85,13 @@ jobs:
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
+
+            echo "⛓️ Configurando componente Dapr en $SERVICE..."
+            az containerapp dapr component set \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --yaml ./dapr/components/resiliencia-http.yaml \
+              --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
           done
@@ -129,6 +136,12 @@ jobs:
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
+              --subscription $AZURE_SUBSCRIPTION_ID
+
+            az containerapp dapr component set \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --yaml ./dapr/components/resiliencia-http.yaml \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"

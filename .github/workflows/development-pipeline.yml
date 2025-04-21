@@ -87,10 +87,14 @@ jobs:
               --subscription $AZURE_SUBSCRIPTION_ID
 
             echo "⛓️ Configurando componente Dapr en $SERVICE..."
-            az containerapp dapr component set \
+            az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
-              --yaml ./dapr/components/resiliencia-http.yaml \
+              --set dapr.enabled=true \
+              --set dapr.app-id=$SERVICE \
+              --set dapr.http-max-retry-attempts=3 \
+              --set dapr.http-retry-interval="100ms" \
+              --set dapr.http-timeout="10s" \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
@@ -138,10 +142,15 @@ jobs:
               --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
 
-            az containerapp dapr component set \
+            echo "⛓️ Configurando componente Dapr en $SERVICE..."
+            az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
-              --yaml ./dapr/components/resiliencia-http.yaml \
+              --set dapr.enabled=true \
+              --set dapr.app-id=$SERVICE \
+              --set dapr.http-max-retry-attempts=3 \
+              --set dapr.http-retry-interval="100ms" \
+              --set dapr.http-timeout="10s" \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"

@@ -82,6 +82,7 @@ export default {
       return this.tasks.length
     }
   },
+  
   methods: {
     loadTasks () {
       this.isProcessing = true

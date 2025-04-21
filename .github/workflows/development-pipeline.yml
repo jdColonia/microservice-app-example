@@ -90,11 +90,11 @@ jobs:
             az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
-              --set dapr.enabled=true \
-              --set dapr.app-id=$SERVICE \
-              --set dapr.http-max-retry-attempts=3 \
-              --set dapr.http-retry-interval="100ms" \
-              --set dapr.http-timeout="10s" \
+              --enable-dapr \
+              --dapr-app-id $SERVICE \
+              --dapr-http-max-retry-attempts 3 \
+              --dapr-http-retry-interval "100ms" \
+              --dapr-http-timeout "10s" \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
@@ -146,11 +146,11 @@ jobs:
             az containerapp update \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
-              --set dapr.enabled=true \
-              --set dapr.app-id=$SERVICE \
-              --set dapr.http-max-retry-attempts=3 \
-              --set dapr.http-retry-interval="100ms" \
-              --set dapr.http-timeout="10s" \
+              --enable-dapr \
+              --dapr-app-id $SERVICE \
+              --dapr-http-max-retry-attempts 3 \
+              --dapr-http-retry-interval "100ms" \
+              --dapr-http-timeout "10s" \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"

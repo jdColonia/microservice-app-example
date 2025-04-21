@@ -85,17 +85,6 @@ jobs:
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
-
-            echo "⛓️ Configurando componente Dapr en $SERVICE..."
-            az containerapp update \
-              --name $SERVICE \
-              --resource-group $RESOURCE_GROUP \
-              --enable-dapr \
-              --dapr-app-id $SERVICE \
-              --dapr-http-max-retry-attempts 3 \
-              --dapr-http-retry-interval "100ms" \
-              --dapr-http-timeout "10s" \
-              --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
           done
@@ -140,17 +129,6 @@ jobs:
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
-              --subscription $AZURE_SUBSCRIPTION_ID
-
-            echo "⛓️ Configurando componente Dapr en $SERVICE..."
-            az containerapp update \
-              --name $SERVICE \
-              --resource-group $RESOURCE_GROUP \
-              --enable-dapr \
-              --dapr-app-id $SERVICE \
-              --dapr-http-max-retry-attempts 3 \
-              --dapr-http-retry-interval "100ms" \
-              --dapr-http-timeout "10s" \
               --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"

@@ -17,6 +17,7 @@ on:
 # Variables reutilizables a lo largo del workflow
 env:
   TERRAFORM_DIR: 'terraform' # Carpeta donde están los archivos .tf
+  RESOURCE_GROUP: 'microservice-app-rg' # Grupo de recursos de Azure donde están desplegadas las Container Apps
   AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS_COLONIA }} # Credenciales de Azure configuradas en GitHub Secrets
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_COLONIA }} # ID de la suscripción de Azure configuradas en GitHub Secrets
 
@@ -112,3 +113,85 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -input=false tfplan
         working-directory: ${{ env.TERRAFORM_DIR }}
+
+  # ==============================================
+  # ETAPA 3: CONFIGURACIÓN DE RESILIENCIA
+  # ==============================================
+  configure_resiliency:
+    name: '3. Configuración de Resiliencia'
+    needs: apply # Solo se ejecuta si la etapa de validación fue exitosa
+    if: success()
+    runs-on: ubuntu-latest # Agente de ejecución
+
+    steps:
+      # Paso 1: Checkout del código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar Azure CLI
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ env.AZURE_CREDENTIALS }}
+
+      # Paso 3: Instalar/actualizar extensión containerapp
+      - name: Setup Azure CLI extensions
+        run: |
+          # Configurar para permitir extensiones preview
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az config set extension.dynamic_install_allow_preview=true
+
+          # Instalar/actualizar extensión containerapp
+          az extension add --name containerapp --upgrade --yes
+
+          # Verificar versión instalada
+          az version
+
+      # Paso 4: Obtener todos los azure app containers creados en el grupo de recursos
+      - name: Get all Container Apps
+        id: list_aca
+        run: |
+          echo "SERVICES=$(az containerapp list \
+            --resource-group $RESOURCE_GROUP \
+            --subscription $AZURE_SUBSCRIPTION_ID \
+            --query '[].name' -o tsv | tr '\n' ' ')" >> $GITHUB_ENV
+
+      # Paso 4: Configurar políticas de resiliencia para cada servicio
+      - name: Configure resiliency policies
+        run: |
+          for SERVICE in $SERVICES; do
+            echo "🔧 Configurando resiliencia para $SERVICE..."
+
+            if az containerapp resiliency show \
+              --resource-group $RESOURCE_GROUP \
+              --name "${SERVICE}-resiliency" \
+              --container-app-name $SERVICE \
+              --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
+
+              echo "🔄 Actualizando política existente para $SERVICE..."
+              az containerapp resiliency update \
+                --resource-group $RESOURCE_GROUP \
+                --name "${SERVICE}-resiliency" \
+                --container-app-name $SERVICE \
+                --recommended \
+                --subscription $AZURE_SUBSCRIPTION_ID
+            else
+              echo "🆕 Creando nueva política para $SERVICE..."
+              az containerapp resiliency create \
+                --resource-group $RESOURCE_GROUP \
+                --name "${SERVICE}-resiliency" \
+                --container-app-name $SERVICE \
+                --recommended \
+                --subscription $AZURE_SUBSCRIPTION_ID
+            fi
+
+            echo "✅ Configuración aplicada para $SERVICE:"
+            az containerapp resiliency show \
+              --resource-group $RESOURCE_GROUP \
+              --name "${SERVICE}-resiliency" \
+              --container-app-name $SERVICE \
+              --subscription $AZURE_SUBSCRIPTION_ID \
+              --output table
+
+            echo "-------------------------------------------"
+          done

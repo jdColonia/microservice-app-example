@@ -88,6 +88,18 @@ variable "secrets" {
   sensitive   = true
 }
 
+variable "containers" {
+  description = "List of additional containers to run as sidecars"
+  type = list(object({
+    name   = string
+    image  = string
+    cpu    = number
+    memory = string
+    env    = map(string)
+  }))
+  default = null
+}
+
 variable "tags" {
   description = "Tags to apply to the container app"
   type        = map(string)

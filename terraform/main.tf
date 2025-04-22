@@ -215,12 +215,33 @@ module "frontend" {
   max_replicas               = 3
   ingress_external           = true
   ingress_target_port        = 8080
+  # Configuración para múltiples contenedores (sidecar pattern)
+  containers = [
+    {
+      name   = "frontend-app"
+      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" # Reemplazar con tu imagen de frontend
+      cpu    = 0.5
+      memory = "1Gi"
+      env = {
+        "PORT"              = "8080"
+        "AUTH_API_ADDRESS"  = "http://auth-api"
+        "TODOS_API_ADDRESS" = "http://todos-api"
+        "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
+        "JWT_SECRET"        = "secretref:jwt-secret"
+      }
+    },
+    {
+      name   = "frontend-exporter"
+      image  = "nginx/nginx-prometheus-exporter:0.11.0"
+      cpu    = 0.25
+      memory = "0.5Gi"
+      env = {
+        "NGINX_SCRAFE_URI" = "http://frontend/nginx_status"
+      }
+    }
+  ]
   environment_variables = {
-    "PORT"              = "8080"
-    "AUTH_API_ADDRESS"  = "http://auth-api"
-    "TODOS_API_ADDRESS" = "http://todos-api"
-    "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
-    "JWT_SECRET"        = "secretref:jwt-secret"
+    "JWT_SECRET" = "secretref:jwt-secret" # Variables compartidas si es necesario
   }
   secrets = {
     "jwt-secret" = var.jwt_secret

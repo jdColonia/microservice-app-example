@@ -119,7 +119,7 @@ jobs:
           done
 
       # Paso 7: Desplegar las imágenes modificadas en sus Container Apps
-      - name: Despliegue de microservicios modificados
+      - name: Despliegue y reinicio de microservicios modificados
         if: github.event_name == 'push' && steps.detect.outputs.detected_services != ''
         run: |
           for SERVICE in ${{ steps.detect.outputs.detected_services }}; do
@@ -129,12 +129,14 @@ jobs:
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
-            
+      
             echo "🔄 Reiniciando container de $SERVICE..."
             az containerapp revision restart \
               --name $SERVICE \
               --resource-group $RESOURCE_GROUP \
               --subscription $AZURE_SUBSCRIPTION_ID
-            
+      
             echo "✅ $SERVICE actualizado y reiniciado"
             echo "-------------------------------------------"
+          done
+    

@@ -129,6 +129,12 @@ jobs:
               --resource-group $RESOURCE_GROUP \
               --image $ACR_NAME/$SERVICE:latest \
               --subscription $AZURE_SUBSCRIPTION_ID
-            echo "✅ $SERVICE actualizado"
+            
+            echo "🔄 Reiniciando container de $SERVICE..."
+            az containerapp revision restart \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --subscription $AZURE_SUBSCRIPTION_ID
+            
+            echo "✅ $SERVICE actualizado y reiniciado"
             echo "-------------------------------------------"
-          done

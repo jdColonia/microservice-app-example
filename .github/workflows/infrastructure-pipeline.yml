@@ -147,31 +147,32 @@ jobs:
           # Verificar versión instalada
           az version
 
-      # Paso 4: Obtener todos los azure app containers creados en el grupo de recursos
-      - name: Get all Container Apps
-        id: list_aca
+      # Paso 3: Configurar políticas de resiliencia para cada servicio
+      - name: Configure resiliency policies for all Container Apps
         run: |
-          echo "SERVICES=$(az containerapp list \
-            --resource-group $RESOURCE_GROUP \
-            --subscription $AZURE_SUBSCRIPTION_ID \
-            --query '[].name' -o tsv | tr '\n' ' ')" >> $GITHUB_ENV
+          echo "🔍 Obteniendo todos los Container Apps del grupo $RESOURCE_GROUP..."
+          SERVICES=$(az containerapp list --resource-group $RESOURCE_GROUP --subscription $AZURE_SUBSCRIPTION_ID --query "[].name" -o tsv)
 
-      # Paso 4: Configurar políticas de resiliencia para cada servicio
-      - name: Configure resiliency policies
-        run: |
           for SERVICE in $SERVICES; do
             echo "🔧 Configurando resiliencia para $SERVICE..."
 
+            # Generar nombre válido para la política
+            POLICY_NAME="${SERVICE}-resiliency"
+            POLICY_NAME=$(echo "$POLICY_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g' | sed 's/[^a-z0-9-]//g' | cut -c1-32 | sed 's/-$//')
+
+            echo "📛 Nombre de política generado: $POLICY_NAME"
+
+            # Verificar si la política ya existe
             if az containerapp resiliency show \
-              --resource-group $RESOURCE_GROUP \
-              --name "${SERVICE}-resiliency" \
-              --container-app-name $SERVICE \
-              --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
+               --resource-group $RESOURCE_GROUP \
+               --name "$POLICY_NAME" \
+               --container-app-name $SERVICE \
+               --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
 
               echo "🔄 Actualizando política existente para $SERVICE..."
               az containerapp resiliency update \
                 --resource-group $RESOURCE_GROUP \
-                --name "${SERVICE}-resiliency" \
+                --name "$POLICY_NAME" \
                 --container-app-name $SERVICE \
                 --recommended \
                 --subscription $AZURE_SUBSCRIPTION_ID
@@ -179,7 +180,7 @@ jobs:
               echo "🆕 Creando nueva política para $SERVICE..."
               az containerapp resiliency create \
                 --resource-group $RESOURCE_GROUP \
-                --name "${SERVICE}-resiliency" \
+                --name "$POLICY_NAME" \
                 --container-app-name $SERVICE \
                 --recommended \
                 --subscription $AZURE_SUBSCRIPTION_ID
@@ -188,7 +189,7 @@ jobs:
             echo "✅ Configuración aplicada para $SERVICE:"
             az containerapp resiliency show \
               --resource-group $RESOURCE_GROUP \
-              --name "${SERVICE}-resiliency" \
+              --name "$POLICY_NAME" \
               --container-app-name $SERVICE \
               --subscription $AZURE_SUBSCRIPTION_ID \
               --output table

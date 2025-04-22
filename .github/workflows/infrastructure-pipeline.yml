@@ -147,7 +147,7 @@ jobs:
           # Verificar versión instalada
           az version
 
-      # Paso 3: Configurar políticas de resiliencia para cada servicio
+      # Paso 4: Configurar políticas de resiliencia para cada servicio
       - name: Configure resiliency policies for all Container Apps
         run: |
           echo "🔍 Obteniendo todos los Container Apps del grupo $RESOURCE_GROUP..."
@@ -156,18 +156,21 @@ jobs:
           for SERVICE in $SERVICES; do
             echo "🔧 Configurando resiliencia para $SERVICE..."
 
-            # Generar nombre válido para la política
-            POLICY_NAME="${SERVICE}-resiliency"
-            POLICY_NAME=$(echo "$POLICY_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/--/-/g' | sed 's/[^a-z0-9-]//g' | cut -c1-32 | sed 's/-$//')
+            # Limpiar y generar nombre base
+            CLEAN_NAME=$(echo "$SERVICE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+            BASE_NAME="${CLEAN_NAME}-resiliency"
+
+            # Asegurar que el nombre tenga máximo 30 caracteres
+            POLICY_NAME=$(echo "$BASE_NAME" | cut -c1-30 | sed 's/-$//')
 
             echo "📛 Nombre de política generado: $POLICY_NAME"
 
             # Verificar si la política ya existe
             if az containerapp resiliency show \
-               --resource-group $RESOURCE_GROUP \
-               --name "$POLICY_NAME" \
-               --container-app-name $SERVICE \
-               --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
+              --resource-group $RESOURCE_GROUP \
+              --name "$POLICY_NAME" \
+              --container-app-name $SERVICE \
+              --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
 
               echo "🔄 Actualizando política existente para $SERVICE..."
               az containerapp resiliency update \

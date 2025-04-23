@@ -1,0 +1,53 @@
+# Ignore auth-api directories and files
+auth-api/vendor/
+auth-api/auth-api/
+
+# Ignore specific frontend files and directories
+frontend/.DS_Store
+frontend/node_modules/
+frontend/dist/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Ignore editor configuration files in frontend
+frontend/.idea/
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+
+# Ignore users-api directories and files
+users-api/.mvn/
+users-api/target/
+
+# Ignore Prometheus and Grafana data directories
+prometheus/data/
+grafana/data/
+
+# Ignore Python virtual environment in log-message-processor
+log-message-processor/venv/
+
+# Ignore specific todos-api files and directories
+todos-api/.DS_Store
+todos-api/node_modules/
+todos-api/dist/
+todos-api/npm-debug.log*
+todos-api/yarn-debug.log*
+todos-api/yarn-error.log*
+
+# Ignore editor configuration files in todos-api
+todos-api/.idea/
+todos-api/.vscode/
+todos-api/*.suo
+todos-api/*.ntvs*
+todos-api/*.njsproj
+todos-api/*.sln
+
+# Ignore global editor configuration files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

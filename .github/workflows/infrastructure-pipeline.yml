@@ -24,11 +24,20 @@ env:
 
 jobs:
   # ==============================================
+  # ETAPA 0: VALIDACIÓN DE BACKEND
+  # ==============================================
+  setup-backend:
+    name: '0. Setup Backend Terraform (si es necesario)'
+    uses: ./.github/workflows/backend.yml
+    with:
+      location: 'eastus' # O la región deseada
+
+  # ==============================================
   # ETAPA 1: VALIDACIÓN DE INFRAESTRUCTURA
   # ==============================================
   validate:
     name: '1. Validación de Infraestructura'
-    runs-on: ubuntu-latest # Agente de ejecución (máquina virtual en la nube)
+    runs-on: ubuntu-latest
 
     steps:
       # Paso 1: Checkout del código
@@ -56,7 +65,7 @@ jobs:
           -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
           -backend-config="key=${{ secrets.TF_STATE_KEY }}" \
           -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY }}"
-        working-directory: terraform
+        working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 5: Validar la sintaxis de los archivos Terraform
       - name: Terraform Validate
@@ -85,7 +94,7 @@ jobs:
     name: '2. Aplicar Infraestructura'
     needs: validate # Solo se ejecuta si la etapa de validación fue exitosa
     if: success()
-    runs-on: ubuntu-latest # Agente de ejecución
+    runs-on: ubuntu-latest
 
     steps:
       # Paso 1: Checkout del código
@@ -134,7 +143,7 @@ jobs:
     name: '3. Configuración de Resiliencia'
     needs: apply # Solo se ejecuta si la etapa de aplicación fue exitosa
     if: success()
-    runs-on: ubuntu-latest # Agente de ejecución
+    runs-on: ubuntu-latest
 
     steps:
       # Paso 1: Checkout del código

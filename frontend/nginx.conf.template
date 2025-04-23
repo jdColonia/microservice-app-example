@@ -7,16 +7,6 @@ http {
   default_type  application/octet-stream;
   sendfile      on;
 
-  # Add the server to expose the metrics
-  server {
-    listen 8081;
-
-    location /nginx_status {
-      stub_status on;
-      access_log off;
-    }
-  }
-
   server {
     listen 8080;
 
@@ -41,6 +31,11 @@ http {
     location /zipkin {
       proxy_pass ${ZIPKIN_URL};
       proxy_http_version 1.1;
+    }
+
+    location /nginx_status {
+      stub_status on;
+      access_log off;
     }
   }
 }

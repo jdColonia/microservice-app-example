@@ -86,7 +86,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8081:8080"
+      - "8080:8080"
     environment:
       - PORT=8080
       - AUTH_API_ADDRESS=http://auth-api:8000
@@ -94,7 +94,7 @@ services:
       - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
       - JWT_SECRET=PRFT
     expose:
-      - 8081
+      - 8080
     depends_on:
       - auth-api
       - todos-api
@@ -103,9 +103,9 @@ services:
       - microservices-network
   
   frontend-exporter:
-    image: nginx/nginx-prometheus-exporter:0.11.0
+    image: nginx/nginx-prometheus-exporter:latest
     command:
-      - -nginx.scrape-uri=http://frontend:8081/nginx_status
+      - --nginx.scrape-uri=http://frontend:8080/nginx_status
     expose:
       - 9113 # Port where the exporter displays the metrics
     depends_on:
@@ -117,9 +117,6 @@ services:
   prometheus:
     build:
       context: ./prometheus
-    user: "65534" # ID for non-root user
-    volumes:
-      - ./prometheus/data:/prometheus
     ports:
       - "9090:9090"
     environment:
@@ -136,9 +133,6 @@ services:
   # Grafana Service for visualization
   grafana:
     image: grafana/grafana
-    user: "472"  # User ID for non-root user
-    volumes:
-      - "./grafana/data:/var/lib/grafana"  # Data directory for Grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin  
       - GF_SECURITY_ADMIN_PASSWORD=admin  

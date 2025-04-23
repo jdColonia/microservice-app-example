@@ -30,13 +30,14 @@ jobs:
     name: '0. Setup Backend Terraform (si es necesario)'
     uses: ./.github/workflows/backend.yml
     with:
-      location: 'eastus' # O la región deseada
+      location: 'eastus'
 
   # ==============================================
   # ETAPA 1: VALIDACIÓN DE INFRAESTRUCTURA
   # ==============================================
   validate:
     name: '1. Validación de Infraestructura'
+    needs: setup-backend
     runs-on: ubuntu-latest
 
     steps:
@@ -92,7 +93,7 @@ jobs:
   # ==============================================
   apply:
     name: '2. Aplicar Infraestructura'
-    needs: validate # Solo se ejecuta si la etapa de validación fue exitosa
+    needs: validate
     if: success()
     runs-on: ubuntu-latest
 
@@ -141,7 +142,7 @@ jobs:
   # ==============================================
   configure_resiliency:
     name: '3. Configuración de Resiliencia'
-    needs: apply # Solo se ejecuta si la etapa de aplicación fue exitosa
+    needs: apply
     if: success()
     runs-on: ubuntu-latest
 

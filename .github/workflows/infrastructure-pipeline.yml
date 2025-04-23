@@ -50,6 +50,11 @@ jobs:
       # Paso 4: Inicializar Terraform con backend
       - name: Terraform Init
         run: |
+          echo "RESOURCE_GROUP=${{ secrets.TF_STATE_RESOURCE_GROUP }}
+          echo "STORAGE_ACCOUNT=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}
+          echo "CONTAINER_NAME=${{ secrets.TF_STATE_CONTAINER }}
+          echo "KEY_NAME=${{ secrets.TF_STATE_KEY }}
+
           terraform init \
           -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
           -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \

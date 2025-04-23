@@ -13,6 +13,7 @@ on:
       - master
     paths:
       - 'terraform/**'
+  workflow_dispatch: # También permite activación manual
 
 # Variables reutilizables a lo largo del workflow
 env:
@@ -46,10 +47,16 @@ jobs:
         with:
           terraform_version: 'latest'
 
-      # Paso 4: Inicializar Terraform
+      # Paso 4: Inicializar Terraform con backend
       - name: Terraform Init
-        run: terraform init -reconfigure
-        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
+          -backend-config="key=${{ secrets.TF_STATE_KEY }}" \
+          -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY }}"
+        working-directory: terraform
 
       # Paso 5: Validar la sintaxis de los archivos Terraform
       - name: Terraform Validate
@@ -104,9 +111,15 @@ jobs:
           name: terraform-plan
           path: ${{ env.TERRAFORM_DIR }}
 
-      # Paso 5: Inicializar Terraform en esta etapa también
+      # Paso 5: Inicializar Terraform en esta etapa también con backend
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.TF_STATE_CONTAINER }}" \
+          -backend-config="key=${{ secrets.TF_STATE_KEY }}" \
+          -backend-config="access_key=${{ secrets.TF_STATE_ACCESS_KEY }}"
         working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 6: Aplicar la infraestructura usando el archivo de plan
@@ -119,7 +132,7 @@ jobs:
   # ==============================================
   configure_resiliency:
     name: '3. Configuración de Resiliencia'
-    needs: apply # Solo se ejecuta si la etapa de validación fue exitosa
+    needs: apply # Solo se ejecuta si la etapa de aplicación fue exitosa
     if: success()
     runs-on: ubuntu-latest # Agente de ejecución
 
@@ -151,7 +164,7 @@ jobs:
       - name: Configure resiliency policies for all Container Apps
         run: |
           echo "🔍 Obteniendo todos los Container Apps del grupo $RESOURCE_GROUP..."
-          SERVICES=$(az containerapp list --resource-group $RESOURCE_GROUP --subscription $AZURE_SUBSCRIPTION_ID --query "[].name" -o tsv)
+          SERVICES=$(az containerapp list --resource-group $RESOURCE_GROUP --subscription ${{ env.AZURE_SUBSCRIPTION_ID }} --query "[].name" -o tsv)
 
           for SERVICE in $SERVICES; do
             echo "🔧 Configurando resiliencia para $SERVICE..."
@@ -170,7 +183,7 @@ jobs:
               --resource-group $RESOURCE_GROUP \
               --name "$POLICY_NAME" \
               --container-app-name $SERVICE \
-              --subscription $AZURE_SUBSCRIPTION_ID &>/dev/null; then
+              --subscription ${{ env.AZURE_SUBSCRIPTION_ID }} &>/dev/null; then
 
               echo "🔄 Actualizando política existente para $SERVICE..."
               az containerapp resiliency update \
@@ -178,7 +191,7 @@ jobs:
                 --name "$POLICY_NAME" \
                 --container-app-name $SERVICE \
                 --recommended \
-                --subscription $AZURE_SUBSCRIPTION_ID
+                --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
             else
               echo "🆕 Creando nueva política para $SERVICE..."
               az containerapp resiliency create \
@@ -186,7 +199,7 @@ jobs:
                 --name "$POLICY_NAME" \
                 --container-app-name $SERVICE \
                 --recommended \
-                --subscription $AZURE_SUBSCRIPTION_ID
+                --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
             fi
 
             echo "✅ Configuración aplicada para $SERVICE:"

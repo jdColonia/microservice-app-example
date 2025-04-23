@@ -1,3 +1,10 @@
+# Backend configuration
+terraform {
+  backend "azurerm" {
+    # Values ​​will be provided via the backend pipeline
+  }
+}
+
 # Configure the Azure Provider
 provider "azurerm" {
   features {}
@@ -90,8 +97,8 @@ module "users_api" {
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
   ingress_external           = true
@@ -100,7 +107,7 @@ module "users_api" {
     "JWT_SECRET"             = "secretref:jwt-secret"
     "SERVER_PORT"            = "8083"
     "SPRING_PROFILES_ACTIVE" = "default"
-    "ZIPKIN_URL"             = "http://zipkin/api/v2/spans"
+    "ZIPKIN_URL"             = "http://zipkin/"
   }
 
   secrets = {

@@ -80,22 +80,26 @@ jobs:
             docker push $ACR_NAME/$SERVICE:$timestamp
 
             echo "🚀 Desplegando $SERVICE en Azure..."
-            if [ "$SERVICE" == "frontend" ]; then
-              # Actualizar solo el contenedor principal del frontend
-              az containerapp update \
-                --name $SERVICE \
-                --resource-group $RESOURCE_GROUP \
-                --image $ACR_NAME/$SERVICE:latest \
-                --container-name frontend-app \
-                --subscription $AZURE_SUBSCRIPTION_ID
-            else
-              # Comando normal para otros servicios
-              az containerapp update \
-                --name $SERVICE \
-                --resource-group $RESOURCE_GROUP \
-                --image $ACR_NAME/$SERVICE:latest \
-                --subscription $AZURE_SUBSCRIPTION_ID
-            fi
+            # Comando normal para otros servicios
+            az containerapp update \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --image $ACR_NAME/$SERVICE:latest \
+              --subscription $AZURE_SUBSCRIPTION_ID
+
+            echo "🔄 Reiniciando container de $SERVICE..."
+            revision=$(az containerapp show \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --subscription $AZURE_SUBSCRIPTION_ID \
+              --query "properties.latestReadyRevisionName" \
+              --output tsv)
+
+            az containerapp revision restart \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --revision $revision \
+              --subscription $AZURE_SUBSCRIPTION_ID
             echo "✅ $SERVICE actualizado"
             echo "-------------------------------------------"
           done
@@ -135,22 +139,12 @@ jobs:
         run: |
           for SERVICE in ${{ steps.detect.outputs.detected_services }}; do
             echo "🚀 Desplegando $SERVICE en Azure..."
-            if [ "$SERVICE" == "frontend" ]; then
-              # Actualizar solo el contenedor principal del frontend
-              az containerapp update \
-                --name $SERVICE \
-                --resource-group $RESOURCE_GROUP \
-                --image $ACR_NAME/$SERVICE:latest \
-                --container-name frontend-app \
-                --subscription $AZURE_SUBSCRIPTION_ID
-            else
-              # Comando normal para otros servicios
-              az containerapp update \
-                --name $SERVICE \
-                --resource-group $RESOURCE_GROUP \
-                --image $ACR_NAME/$SERVICE:latest \
-                --subscription $AZURE_SUBSCRIPTION_ID
-            fi
+            # Comando normal para otros servicios
+            az containerapp update \
+              --name $SERVICE \
+              --resource-group $RESOURCE_GROUP \
+              --image $ACR_NAME/$SERVICE:latest \
+              --subscription $AZURE_SUBSCRIPTION_ID
 
             echo "🔄 Reiniciando container de $SERVICE..."
             revision=$(az containerapp show \

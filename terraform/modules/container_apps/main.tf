@@ -6,49 +6,29 @@ resource "azurerm_container_app" "app" {
   tags                         = var.tags
 
   template {
-    dynamic "container" {
-      for_each = var.containers == null ? [1] : []
-      content {
-        name   = "${var.container_app_name}-container"
-        image  = var.image
-        cpu    = var.cpu
-        memory = var.memory
+    container {
+      name   = "${var.container_app_name}-container"
+      image  = var.image
+      cpu    = var.cpu
+      memory = var.memory
 
-        dynamic "env" {
-          for_each = { for k, v in var.environment_variables : k => v if !startswith(v, "secretref:") }
-          content {
-            name  = env.key
-            value = env.value
-          }
-        }
-
-        dynamic "env" {
-          for_each = { for k, v in var.environment_variables : k => trimprefix(v, "secretref:") if startswith(v, "secretref:") }
-          content {
-            name        = env.key
-            secret_name = env.value
-          }
+      dynamic "env" {
+        for_each = { for k, v in var.environment_variables : k => v if !startswith(v, "secretref:") }
+        content {
+          name  = env.key
+          value = env.value
         }
       }
-    }
 
-    # Contenedores adicionales (sidecar)
-    dynamic "container" {
-      for_each = var.containers != null ? var.containers : []
-      content {
-        name   = container.value.name
-        image  = container.value.image
-        cpu    = container.value.cpu
-        memory = container.value.memory
-
-        dynamic "env" {
-          for_each = container.value.env != null ? container.value.env : {}
-          content {
-            name  = env.key
-            value = env.value
-          }
+      dynamic "env" {
+        for_each = { for k, v in var.environment_variables : k => trimprefix(v, "secretref:") if startswith(v, "secretref:") }
+        content {
+          name        = env.key
+          secret_name = env.value
         }
       }
+      command = length(var.command) > 0 ? var.command : null
+      args    = length(var.args) > 0 ? var.args : null
     }
 
     min_replicas = var.min_replicas
@@ -61,7 +41,7 @@ resource "azurerm_container_app" "app" {
     content {
       external_enabled = var.ingress_external
       target_port      = var.ingress_target_port
-      transport        = "auto"
+      transport        = var.is_tcp ? "tcp" : "auto"
 
       traffic_weight {
         latest_revision = true
@@ -70,7 +50,6 @@ resource "azurerm_container_app" "app" {
     }
   }
 
-  # Definición de secretos
   dynamic "secret" {
     for_each = var.secrets
     content {

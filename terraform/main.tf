@@ -37,9 +37,8 @@ module "container_apps_environment" {
   resource_group_name = module.resource_group.name
   location            = module.resource_group.location
   name                = var.container_apps_environment_name
-  # subnet_id           = module.network.subnet_id
-  tags       = var.tags
-  depends_on = [module.resource_group]
+  tags                = var.tags
+  depends_on          = [module.resource_group]
 }
 
 # Container Apps Modules
@@ -53,8 +52,8 @@ module "zipkin" {
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
   ingress_external           = true
@@ -75,12 +74,13 @@ module "redis" {
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 2.0
+  memory                     = "4Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = true
+  ingress_external           = false
   ingress_target_port        = 6379
+  is_tcp                     = true
   environment_variables      = {}
   secrets                    = {}
   tags                       = var.tags
@@ -93,7 +93,7 @@ module "users_api" {
   location                   = module.resource_group.location
   container_app_name         = "users-api"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/users-api:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
@@ -101,7 +101,7 @@ module "users_api" {
   memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = true
+  ingress_external           = false
   ingress_target_port        = 8083
   environment_variables = {
     "JWT_SECRET"             = "secretref:jwt-secret"
@@ -123,15 +123,15 @@ module "auth_api" {
   location                   = module.resource_group.location
   container_app_name         = "auth-api"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/auth-api:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = true
+  ingress_external           = false
   ingress_target_port        = 8000
   environment_variables = {
     "JWT_SECRET"        = "secretref:jwt-secret"
@@ -143,7 +143,7 @@ module "auth_api" {
     "jwt-secret" = var.jwt_secret
   }
   tags       = var.tags
-  depends_on = [module.container_apps_environment, module.users_api]
+  depends_on = [module.container_apps_environment, module.redis, module.users_api]
 }
 
 module "todos_api" {
@@ -152,15 +152,15 @@ module "todos_api" {
   location                   = module.resource_group.location
   container_app_name         = "todos-api"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/todos-api:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = true
+  ingress_external           = false
   ingress_target_port        = 8082
   environment_variables = {
     "TODO_API_PORT" = "8082"
@@ -178,21 +178,21 @@ module "todos_api" {
   depends_on = [module.container_apps_environment, module.redis, module.users_api]
 }
 
-module "log_processor" {
+module "log_message_processor" {
   source                     = "./modules/container_apps"
   resource_group_name        = module.resource_group.name
   location                   = module.resource_group.location
   container_app_name         = "log-message-processor"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/log-message-processor:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 2.0
+  memory                     = "4Gi"
   min_replicas               = 1
   max_replicas               = 3
-  ingress_external           = true
+  ingress_external           = false
   ingress_target_port        = 8081
   environment_variables = {
     "PORT"          = "8081"
@@ -212,49 +212,52 @@ module "frontend" {
   location                   = module.resource_group.location
   container_app_name         = "frontend"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/frontend:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.5
-  memory                     = "1Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 3
   ingress_external           = true
   ingress_target_port        = 8080
-  # Configuración para múltiples contenedores (sidecar pattern)
-  containers = [
-    {
-      name   = "frontend-app"
-      image  = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" # Reemplazar con tu imagen de frontend
-      cpu    = 0.5
-      memory = "1Gi"
-      env = {
-        "PORT"              = "8080"
-        "AUTH_API_ADDRESS"  = "http://auth-api"
-        "TODOS_API_ADDRESS" = "http://todos-api"
-        "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
-        "JWT_SECRET"        = "secretref:jwt-secret"
-      }
-    },
-    {
-      name   = "frontend-exporter"
-      image  = "nginx/nginx-prometheus-exporter:0.11.0"
-      cpu    = 0.25
-      memory = "0.5Gi"
-      env = {
-        "NGINX_SCRAFE_URI" = "http://frontend/nginx_status"
-      }
-    }
-  ]
   environment_variables = {
-    "JWT_SECRET" = "secretref:jwt-secret" # Variables compartidas si es necesario
+    "PORT"              = "8080"
+    "AUTH_API_ADDRESS"  = "http://auth-api"
+    "TODOS_API_ADDRESS" = "http://todos-api"
+    "ZIPKIN_URL"        = "http://zipkin/api/v2/spans"
+    "JWT_SECRET"        = "secretref:jwt-secret"
   }
   secrets = {
     "jwt-secret" = var.jwt_secret
   }
   tags       = var.tags
-  depends_on = [module.container_apps_environment, module.auth_api, module.todos_api]
+  depends_on = [module.container_apps_environment, module.auth_api, module.todos_api, module.users_api]
+}
+
+module "frontend_exporter" {
+  source                     = "./modules/container_apps"
+  resource_group_name        = module.resource_group.name
+  location                   = module.resource_group.location
+  container_app_name         = "frontend-exporter"
+  container_apps_environment = module.container_apps_environment.name
+  image                      = "nginx/nginx-prometheus-exporter:latest"
+  registry_server            = module.container_registry.login_server
+  registry_username          = module.container_registry.admin_username
+  registry_password          = module.container_registry.admin_password
+  cpu                        = 1.0
+  memory                     = "2Gi"
+  min_replicas               = 1
+  max_replicas               = 3
+  ingress_external           = false
+  ingress_target_port        = 9113
+  environment_variables      = {}
+  secrets                    = {}
+  command                    = ["/usr/bin/nginx-prometheus-exporter"]
+  args                       = ["--nginx.scrape-uri=http://frontend/nginx_status"]
+  tags                       = var.tags
+  depends_on                 = [module.container_apps_environment, module.frontend]
 }
 
 module "prometheus" {
@@ -263,7 +266,7 @@ module "prometheus" {
   location                   = module.resource_group.location
   container_app_name         = "prometheus"
   container_apps_environment = module.container_apps_environment.name
-  image                      = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
+  image                      = "${module.container_registry.login_server}/prometheus:latest"
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
@@ -274,13 +277,13 @@ module "prometheus" {
   ingress_external           = true
   ingress_target_port        = 9090
   environment_variables = {
-    "AUTH_API_TARGET"          = "auth-api.${module.container_apps_environment.default_domain}"
-    "USERS_API_TARGET"         = "users-api.${module.container_apps_environment.default_domain}"
-    "TODOS_API_TARGET"         = "todos-api.${module.container_apps_environment.default_domain}"
-    "LOG_PROCESSOR_TARGET"     = "log-message-processor.${module.container_apps_environment.default_domain}"
-    "FRONTEND_EXPORTER_TARGET" = "frontend.${module.container_apps_environment.default_domain}"
+    "AUTH_API_TARGET"          = "auth-api"
+    "USERS_API_TARGET"         = "users-api"
+    "TODOS_API_TARGET"         = "todos-api"
+    "LOG_PROCESSOR_TARGET"     = "log-message-processor"
+    "FRONTEND_EXPORTER_TARGET" = "frontend-exporter"
   }
-  depends_on = [module.container_apps_environment, module.auth_api, module.users_api, module.todos_api, module.log_processor, module.frontend]
+  depends_on = [module.container_apps_environment, module.auth_api, module.users_api, module.todos_api, module.log_message_processor, module.frontend]
   tags       = var.tags
 }
 
@@ -294,8 +297,8 @@ module "grafana" {
   registry_server            = module.container_registry.login_server
   registry_username          = module.container_registry.admin_username
   registry_password          = module.container_registry.admin_password
-  cpu                        = 0.75
-  memory                     = "1.5Gi"
+  cpu                        = 1.0
+  memory                     = "2Gi"
   min_replicas               = 1
   max_replicas               = 1
   ingress_external           = true
@@ -303,17 +306,6 @@ module "grafana" {
   environment_variables = {
     "GF_SECURITY_ADMIN_PASSWORD" = "12345",
     "GF_PATHS_PROVISIONING"      = "/etc/grafana/provisioning"
-  }
-  secrets = {
-    "grafana-ds" = base64encode(<<EOF
-apiVersion: 1
-datasources:
-  - name: Prometheus
-    type: prometheus
-    url: http://prometheus.${module.container_apps_environment.default_domain}
-    access: proxy
-EOF
-    )
   }
   depends_on = [module.container_apps_environment, module.prometheus]
   tags       = var.tags

@@ -13,18 +13,6 @@ on:
         required: true
         default: 'eastus'
         type: string
-  workflow_call:
-    secrets:
-      AZURE_CREDENTIALS:
-        required: true
-      AZURE_SUBSCRIPTION_ID:
-        required: true
-    inputs:
-      location:
-        description: 'Azure Region para el backend'
-        required: true
-        default: 'eastus'
-        type: string
 
 # Variables reutilizables a lo largo del workflow
 env:

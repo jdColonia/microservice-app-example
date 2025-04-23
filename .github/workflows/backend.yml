@@ -50,15 +50,15 @@ jobs:
       - name: Create Backend Infrastructure
         run: |
           # Crear el grupo de recursos
-          echo "Creando grupo de recursos $RESOURCE_GROUP en ${{ github.inputs.location }}..."
-          az group create --name $RESOURCE_GROUP --location ${{ github.inputs.location }}
+          echo "Creando grupo de recursos $RESOURCE_GROUP en ${{ inputs.location }}..."
+          az group create --name $RESOURCE_GROUP --location ${{ inputs.location }}
           
           # Crear cuenta de almacenamiento
           echo "Creando cuenta de almacenamiento $STORAGE_ACCOUNT..."
           az storage account create \
             --name $STORAGE_ACCOUNT \
             --resource-group $RESOURCE_GROUP \
-            --location ${{ github.inputs.location }} \
+            --location ${{ inputs.location }} \
             --sku Standard_LRS \
             --encryption-services blob \
             --min-tls-version TLS1_2 \

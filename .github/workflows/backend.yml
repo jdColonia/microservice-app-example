@@ -49,11 +49,9 @@ jobs:
       # Paso 4: Crear infraestructura de backend
       - name: Create Backend Infrastructure
         run: |
-          # Crear el grupo de recursos
           echo "Creando grupo de recursos $RESOURCE_GROUP en ${{ inputs.location }}..."
           az group create --name $RESOURCE_GROUP --location ${{ inputs.location }}
           
-          # Crear cuenta de almacenamiento
           echo "Creando cuenta de almacenamiento $STORAGE_ACCOUNT..."
           az storage account create \
             --name $STORAGE_ACCOUNT \
@@ -65,32 +63,32 @@ jobs:
             --allow-blob-public-access false \
             --tags Purpose=TerraformState
           
-          # Obtener clave de acceso
           echo "Obteniendo clave de acceso..."
           STORAGE_KEY=$(az storage account keys list \
             --resource-group $RESOURCE_GROUP \
             --account-name $STORAGE_ACCOUNT \
             --query "[0].value" -o tsv)
           
-          # Crear contenedor de blob
           echo "Creando contenedor de blob $CONTAINER_NAME..."
           az storage container create \
             --name $CONTAINER_NAME \
             --account-name $STORAGE_ACCOUNT \
             --account-key $STORAGE_KEY
           
-          # Guardar información importante
-          echo "STORAGE_KEY=$STORAGE_KEY" >> $GITHUB_ENV
-      
-      # Paso 5: Mostrar información para configurar secretos
+          # Guardar STORAGE_KEY como variable de entorno temporal
+          echo "STORAGE_KEY_TEMP=$STORAGE_KEY" >> $GITHUB_ENV
+
+          # Imprimir como aviso visible
+          echo "::notice title=TF_STATE_ACCESS_KEY::$STORAGE_KEY"
+
       - name: Display Backend Configuration Info
         run: |
           echo "✅ Backend configurado correctamente"
           echo "=============================================================="
-          echo "ℹ️ Información de los GitHub Secrets"
+          echo "ℹ️ Información de los GitHub Secrets (copiar estos valores):"
           echo "TF_STATE_RESOURCE_GROUP: $RESOURCE_GROUP"
           echo "TF_STATE_STORAGE_ACCOUNT: $STORAGE_ACCOUNT"
           echo "TF_STATE_CONTAINER: $CONTAINER_NAME"
           echo "TF_STATE_KEY: $KEY_NAME"
-          echo "TF_STATE_ACCESS_KEY: $STORAGE_KEY"
+          echo "⚠️ TF_STATE_ACCESS_KEY (mira el aviso arriba)"
           echo "=============================================================="

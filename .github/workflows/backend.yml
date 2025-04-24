@@ -9,12 +9,12 @@ on:
   workflow_dispatch: # Activación manual
     inputs:
       resource_group:
-        description: 'Nombre del grupo de recursos para el backend'
+        description: "Nombre del grupo de recursos para el backend"
         required: true
         default: 'tfstate-rg'
         type: string
       location:
-        description: 'Región de Azure donde crear los recursos'
+        description: "Región de Azure donde crear los recursos"
         required: true
         default: 'eastus'
         type: string
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Checkout del repositorio
+      # Paso 1: Checkout del código
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -88,6 +88,12 @@ jobs:
     needs: validate
     if: success()
     runs-on: ubuntu-latest
+    # Definimos los outputs que pasaremos al siguiente job
+    outputs:
+      resource_group: ${{ steps.tf_output.outputs.resource_group }}
+      storage_account: ${{ steps.tf_output.outputs.storage_account }}
+      container_name: ${{ steps.tf_output.outputs.container_name }}
+      storage_key: ${{ steps.tf_output.outputs.storage_key }}
 
     steps:
       # Paso 1: Checkout del código
@@ -126,14 +132,22 @@ jobs:
 
       # Paso 7: Capturar outputs de Terraform
       - name: Capture Terraform Outputs
-        id: terraform_outputs
+        id: tf_output
         run: |
-          echo "RG_NAME=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
-          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
-          echo "CONTAINER_NAME=$(terraform output -raw container_name)" >> $GITHUB_OUTPUT
-          STORAGE_KEY=$(terraform output -raw access_key)
-          echo "::add-mask::$STORAGE_KEY"
-          echo "STORAGE_KEY=$STORAGE_KEY" >> $GITHUB_OUTPUT
+          # Para evitar problemas de formato, capturamos cada output por separado
+          RG=$(terraform output -raw resource_group_name)
+          echo "resource_group=${RG}" >> $GITHUB_OUTPUT
+          
+          SA=$(terraform output -raw storage_account_name)
+          echo "storage_account=${SA}" >> $GITHUB_OUTPUT
+          
+          CN=$(terraform output -raw container_name)
+          echo "container_name=${CN}" >> $GITHUB_OUTPUT
+          
+          # Manejo especial para el valor sensible
+          SK=$(terraform output -raw access_key)
+          echo "::add-mask::${SK}"
+          echo "storage_key=${SK}" >> $GITHUB_OUTPUT
         working-directory: ${{ env.TERRAFORM_DIR }}
 
   # ==============================================
@@ -156,23 +170,15 @@ jobs:
         with:
           creds: ${{ env.AZURE_CREDENTIALS }}
 
-      # Paso 3: Obtener outputs del job anterior
-      - name: Download Terraform Outputs
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-outputs
-          path: ./outputs
-
-      # Paso 4: Configurar variables desde los outputs
+      # Paso 3: Usar los outputs del job anterior
       - name: Set Environment Variables
-        id: set_env
         run: |
-          echo "RESOURCE_GROUP=${{ needs.apply.outputs.RG_NAME }}" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT=${{ needs.apply.outputs.STORAGE_ACCOUNT }}" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=${{ needs.apply.outputs.CONTAINER_NAME }}" >> $GITHUB_ENV
-          echo "STORAGE_KEY=${{ needs.apply.outputs.STORAGE_KEY }}" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=${{ needs.apply.outputs.resource_group }}" >> $GITHUB_ENV
+          echo "STORAGE_ACCOUNT=${{ needs.apply.outputs.storage_account }}" >> $GITHUB_ENV
+          echo "CONTAINER_NAME=${{ needs.apply.outputs.container_name }}" >> $GITHUB_ENV
+          echo "STORAGE_KEY=${{ needs.apply.outputs.storage_key }}" >> $GITHUB_ENV
 
-      # Paso 5: Actualizar Secrets en GitHub
+      # Paso 4: Actualizar Secrets en GitHub
       - name: Set GitHub Secrets (TF_STATE_*)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -184,7 +190,7 @@ jobs:
           gh secret set TF_STATE_CONTAINER --body "$CONTAINER_NAME" --repo $GITHUB_REPOSITORY
           gh secret set TF_STATE_ACCESS_KEY --body "$STORAGE_KEY" --repo $GITHUB_REPOSITORY
 
-      # Paso 6: Mostrar los Secrets de GitHub
+      # Paso 5: Mostrar los Secrets de GitHub
       - name: Output backend configuration
         run: |
           echo "✅ Backend configurado correctamente"

@@ -140,7 +140,6 @@ jobs:
           
           # Obtener la clave de acceso usando Azure CLI
           STORAGE_KEY=$(terraform output -raw access_key)
-          echo "::add-mask::$STORAGE_KEY"
           echo "STORAGE_KEY=$STORAGE_KEY" >> $GITHUB_ENV
         working-directory: ${{ env.TERRAFORM_DIR }}
 

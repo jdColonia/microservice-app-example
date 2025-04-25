@@ -74,22 +74,32 @@ jobs:
       - name: Capture Terraform Outputs
         id: terraform_output
         run: |
-          # Guardar los outputs en variables separadas
-          RG_NAME=$(terraform output -raw resource_group_name 2>/dev/null || echo "")
-          SA_NAME=$(terraform output -raw storage_account_name 2>/dev/null || echo "")
-          CN_NAME=$(terraform output -raw container_name 2>/dev/null || echo "")
-          ACCESS_KEY=$(terraform output -raw access_key 2>/dev/null || echo "")
+          # Desactivar temporalmente la salida de depuración de acciones si está activada
+          if [[ -n "$ACTIONS_STEP_DEBUG" && "$ACTIONS_STEP_DEBUG" == "true" ]]; then
+            set +x
+          fi
           
-          # Verificar y agregar al GITHUB_ENV
-          echo "RESOURCE_GROUP=${RG_NAME}" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT=${SA_NAME}" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=${CN_NAME}" >> $GITHUB_ENV
-          echo "STORAGE_KEY=${ACCESS_KEY}" >> $GITHUB_ENV
+          # Guardar outputs y limpiarlos de posibles mensajes de debug
+          RG_NAME=$(terraform output -raw resource_group_name | head -n 1 | tr -d '\n')
+          SA_NAME=$(terraform output -raw storage_account_name | head -n 1 | tr -d '\n')
+          CN_NAME=$(terraform output -raw container_name | head -n 1 | tr -d '\n')
+          ACCESS_KEY=$(terraform output -raw access_key | head -n 1 | tr -d '\n')
+          
+          # Guardar en variables de salida y en variables de entorno
+          echo "::set-output name=resource_group::$RG_NAME"
+          echo "::set-output name=storage_account::$SA_NAME"
+          echo "::set-output name=container_name::$CN_NAME"
+          
+          # Usar un archivo temporal para agregar al GITHUB_ENV
+          echo "RESOURCE_GROUP=$RG_NAME" >> "$GITHUB_ENV"
+          echo "STORAGE_ACCOUNT=$SA_NAME" >> "$GITHUB_ENV"
+          echo "CONTAINER_NAME=$CN_NAME" >> "$GITHUB_ENV"
+          echo "STORAGE_KEY=$ACCESS_KEY" >> "$GITHUB_ENV"
           
           # Imprimir para debug (sin mostrar la clave)
-          echo "Resource Group: ${RG_NAME}"
-          echo "Storage Account: ${SA_NAME}"
-          echo "Container Name: ${CN_NAME}"
+          echo "Resource Group: $RG_NAME"
+          echo "Storage Account: $SA_NAME"
+          echo "Container Name: $CN_NAME"
           echo "Access Key: [REDACTED]"
         working-directory: ${{ env.TERRAFORM_DIR }}
 

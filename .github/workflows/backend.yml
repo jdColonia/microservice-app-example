@@ -126,26 +126,12 @@ jobs:
 
       # Paso 7: Capturar outputs de Terraform y configurar variables de entorno
       - name: Capture Terraform Outputs
-        id: tf_outputs
         run: |
-          # Captura los outputs limpios
-          RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null | tr -d '\n')
-          STORAGE_ACCOUNT=$(terraform output -raw storage_account_name 2>/dev/null | tr -d '\n')
-          CONTAINER_NAME=$(terraform output -raw container_name 2>/dev/null | tr -d '\n')
-          STORAGE_KEY=$(terraform output -raw access_key 2>/dev/null | tr -d '\n')
-
-          # Guarda en GITHUB_ENV
-          echo "RESOURCE_GROUP=${RESOURCE_GROUP}" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT=${STORAGE_ACCOUNT}" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=${CONTAINER_NAME}" >> $GITHUB_ENV
-          echo "STORAGE_KEY=${STORAGE_KEY}" >> $GITHUB_ENV
-
-          # Depuración: Verifica los valores (no aparecerán en producción)
-          echo "Valores capturados:"
-          echo "RESOURCE_GROUP=${RESOURCE_GROUP}"
-          echo "STORAGE_ACCOUNT=${STORAGE_ACCOUNT}"
-          echo "CONTAINER_NAME=${CONTAINER_NAME}"
-          echo "STORAGE_KEY=[PROTEGIDO]"
+          # Capturar outputs de Terraform y asegurarse de que no contengan saltos de línea
+          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name)"  >> $GITHUB_ENV
+          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name)" >> $GITHUB_ENV
+          echo "CONTAINER_NAME=$(terraform output -raw container_name)" >> $GITHUB_ENV
+          echo "STORAGE_KEY=$(terraform output -raw access_key)" >> $GITHUB_ENV
         working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 8: Actualizar Secrets en GitHub
@@ -154,10 +140,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_REPOSITORY: 'MicroTodoSuite/microservice-app-ops'
         run: |
-          gh secret set TF_STATE_RESOURCE_GROUP --body "$RESOURCE_GROUP" --repo $GITHUB_REPOSITORY
-          gh secret set TF_STATE_STORAGE_ACCOUNT --body "$STORAGE_ACCOUNT" --repo $GITHUB_REPOSITORY
-          gh secret set TF_STATE_CONTAINER --body "$CONTAINER_NAME" --repo $GITHUB_REPOSITORY
-          gh secret set TF_STATE_ACCESS_KEY --body "$STORAGE_KEY" --repo $GITHUB_REPOSITORY
+          gh secret set TF_STATE_RESOURCE_GROUP -b ${{ env.RESOURCE_GROUP }}" --repo $GITHUB_REPOSITORY
+          gh secret set TF_STATE_STORAGE_ACCOUNT -b ${{ env.STORAGE_ACCOUNT }}" --repo $GITHUB_REPOSITORY
+          gh secret set TF_STATE_CONTAINER -b ${{ env.CONTAINER_NAME }}" --repo $GITHUB_REPOSITORY
+          gh secret set TF_STATE_ACCESS_KEY -b ${{ env.STORAGE_KEY }}" --repo $GITHUB_REPOSITORY
 
       # Paso 9: Mostrar los Secrets de GitHub
       - name: Output backend configuration
@@ -165,8 +151,8 @@ jobs:
           echo "✅ Backend configurado correctamente"
           echo "=============================================================="
           echo "ℹ️ Información de los GitHub Secrets:"
-          echo "TF_STATE_RESOURCE_GROUP: $RESOURCE_GROUP"
-          echo "TF_STATE_STORAGE_ACCOUNT: $STORAGE_ACCOUNT"
-          echo "TF_STATE_CONTAINER: $CONTAINER_NAME"
+          echo "TF_STATE_RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}"
+          echo "TF_STATE_STORAGE_ACCOUNT: ${{ env.STORAGE_ACCOUNT }}"
+          echo "TF_STATE_CONTAINER: ${{ env.CONTAINER_NAME }}"
           echo "⚠️ TF_STATE_ACCESS_KEY: [PROTEGIDO]"
           echo "=============================================================="

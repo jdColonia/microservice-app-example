@@ -36,7 +36,7 @@ jobs:
     steps:
       # Paso 1: Checkout del código
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Paso 2: Configurar Azure CLI
       - name: Azure Login
@@ -92,7 +92,7 @@ jobs:
     steps:
       # Paso 1: Checkout del código
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Paso 2: Configurar Azure CLI
       - name: Azure Login

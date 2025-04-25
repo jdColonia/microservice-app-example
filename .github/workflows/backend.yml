@@ -127,10 +127,10 @@ jobs:
       # Paso 7: Capturar outputs de Terraform y configurar variables de entorno
       - name: Capture Terraform Outputs
         run: |
-          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name | tr -d '\n')" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name | tr -d '\n')" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=$(terraform output -raw container_name | tr -d '\n')" >> $GITHUB_ENV
-          echo "STORAGE_KEY=$(terraform output -raw access_key | tr -d '\n')" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
+          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
+          echo "CONTAINER_NAME=$(terraform output -raw container_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
+          echo "STORAGE_KEY=$(terraform output -raw access_key &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
         working-directory: ${{ env.TERRAFORM_DIR }}
 
       # Paso 8: Actualizar Secrets en GitHub

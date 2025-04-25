@@ -129,10 +129,10 @@ jobs:
         id: tf_outputs
         run: |
           # Captura los outputs limpios
-          RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null)
-          STORAGE_ACCOUNT=$(terraform output -raw storage_account_name 2>/dev/null)
-          CONTAINER_NAME=$(terraform output -raw container_name 2>/dev/null)
-          STORAGE_KEY=$(terraform output -raw access_key 2>/dev/null)
+          RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null | tr -d '\n')
+          STORAGE_ACCOUNT=$(terraform output -raw storage_account_name 2>/dev/null | tr -d '\n')
+          CONTAINER_NAME=$(terraform output -raw container_name 2>/dev/null | tr -d '\n')
+          STORAGE_KEY=$(terraform output -raw access_key 2>/dev/null | tr -d '\n')
 
           # Guarda en GITHUB_ENV
           echo "RESOURCE_GROUP=${RESOURCE_GROUP}" >> $GITHUB_ENV

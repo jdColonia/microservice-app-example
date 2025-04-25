@@ -146,8 +146,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh auth login --with-token
-
           gh secret set TF_STATE_RESOURCE_GROUP --body "$RESOURCE_GROUP" --repo $GITHUB_REPOSITORY
           gh secret set TF_STATE_STORAGE_ACCOUNT --body "$STORAGE_ACCOUNT" --repo $GITHUB_REPOSITORY
           gh secret set TF_STATE_CONTAINER --body "$CONTAINER_NAME" --repo $GITHUB_REPOSITORY

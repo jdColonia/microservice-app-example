@@ -72,72 +72,25 @@ jobs:
             -var="location=${{ github.event.inputs.location }}"
         working-directory: ${{ env.TERRAFORM_DIR }}
 
-      # Paso 7: Subir el archivo tfplan como artefacto
-      # - Esto permite usar el mismo plan en la siguiente etapa
-      - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: ${{ env.TERRAFORM_DIR }}/tfplan
-
-  # ==============================================
-  # ETAPA 2: APLICACIÓN DE CAMBIOS EN AZURE Y CONFIGURACIÓN DEL BACKEND
-  # ==============================================
-  apply:
-    name: '2. Aplicar Infraestructura y Configurar Backend'
-    needs: validate
-    if: success()
-    runs-on: ubuntu-latest
-
-    steps:
-      # Paso 1: Checkout del código
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Paso 2: Configurar Azure CLI
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ env.AZURE_CREDENTIALS }}
-
-      # Paso 3: Instalar Terraform
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 'latest'
-
-      # Paso 4: Descargar el artefacto tfplan generado anteriormente
-      - name: Download Terraform Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan
-          path: ${{ env.TERRAFORM_DIR }}
-
-      # Paso 5: Inicializar Terraform en esta etapa también con backend
-      - name: Terraform Init
-        run: |
-          terraform init
-        working-directory: ${{ env.TERRAFORM_DIR }}
-
-      # Paso 6: Aplicar la infraestructura usando el archivo de plan
+      # Paso 7: Aplicar la infraestructura usando el archivo de plan
       - name: Terraform Apply
         run: terraform apply -input=false tfplan
         working-directory: ${{ env.TERRAFORM_DIR }}
 
-      # Paso 7: Capturar outputs de Terraform y configurar variables de entorno
+      # Paso 8: Capturar outputs de Terraform y configurar variables de entorno
       - name: Capture Terraform Outputs
         run: |
-          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
-          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
-          echo "CONTAINER_NAME=$(terraform output -raw container_name &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
-          echo "STORAGE_KEY=$(terraform output -raw access_key &>/dev/null | tr -d '\n')" >> $GITHUB_ENV
+          echo "RESOURCE_GROUP=$(terraform output -raw resource_group_name)" >> $GITHUB_ENV
+          echo "STORAGE_ACCOUNT=$(terraform output -raw storage_account_name)" >> $GITHUB_ENV
+          echo "CONTAINER_NAME=$(terraform output -raw container_name)" >> $GITHUB_ENV
+          echo "STORAGE_KEY=$(terraform output -raw access_key)" >> $GITHUB_ENV
         working-directory: ${{ env.TERRAFORM_DIR }}
 
-      # Paso 8: Actualizar Secrets en GitHub
+      # Paso 9: Actualizar Secrets en GitHub
       - name: Set GitHub Secrets (TF_STATE_*)
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          GITHUB_REPOSITORY: 'MicroTodoSuite/microservice-app-ops'
+          GH_TOKEN: ${{ secrets.GH_TOKEN }} # Token de Github
+          GITHUB_REPOSITORY: 'MicroTodoSuite/microservice-app-ops' # Repositorio donde están los secrets
         run: |
           gh secret set TF_STATE_RESOURCE_GROUP -b "${{ env.RESOURCE_GROUP }}" --repo $GITHUB_REPOSITORY
           gh secret set TF_STATE_STORAGE_ACCOUNT -b "${{ env.STORAGE_ACCOUNT }}" --repo $GITHUB_REPOSITORY
